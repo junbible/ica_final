@@ -7,12 +7,14 @@ import { MessageBubble } from "./MessageBubble"
 import { TypingIndicator } from "./TypingIndicator"
 import { QuickReplies } from "./QuickReplies"
 import { ChatInput } from "./ChatInput"
+import { MapCard, type Restaurant } from "./MapCard"
 
 interface Message {
   id: string
   content: string
   isUser: boolean
   timestamp: string
+  restaurants?: Restaurant[]
 }
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
@@ -77,6 +79,7 @@ export function ChatContainer() {
         content: data.response,
         isUser: false,
         timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+        restaurants: data.restaurants || undefined,
       }
 
       setMessages((prev) => [...prev, botMessage])
@@ -138,12 +141,18 @@ export function ChatContainer() {
         <ScrollArea className="h-full">
           <div className="p-4 space-y-4">
             {messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                content={message.content}
-                isUser={message.isUser}
-                timestamp={message.timestamp}
-              />
+              <div key={message.id}>
+                <MessageBubble
+                  content={message.content}
+                  isUser={message.isUser}
+                  timestamp={message.timestamp}
+                />
+                {message.restaurants && message.restaurants.length > 0 && (
+                  <div className="ml-10 mt-2">
+                    <MapCard restaurants={message.restaurants} />
+                  </div>
+                )}
+              </div>
             ))}
             {isLoading && <TypingIndicator />}
             <div ref={messagesEndRef} />
