@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.coverage
+htmlcov/
+.venv
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Environment
+.env
+.env.local
+
+# Node (frontend)
+src/frontend/node_modules/
+src/frontend/dist/
+
+# Docs
+docs/
+*.md
+
+# Tests
+**/test_*.py
+**/tests/
