@@ -4,10 +4,11 @@ import os
 import uuid
 from datetime import datetime
 from openai import AsyncOpenAI
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from dotenv import load_dotenv
 from .schemas import ChatRequest, ChatResponse, SessionInfo, ResetResponse, Restaurant, MenuRecommendation
 from .kakao_api import search_by_condition, LOCATION_COORDS
+from .rate_limit import limiter, RateLimits
 
 load_dotenv()
 
@@ -412,10 +413,14 @@ async def get_response(message: str, session_id: str) -> tuple[str, list[dict] |
 
 
 @router.post("/message", response_model=ChatResponse)
-async def send_message(request: ChatRequest) -> ChatResponse:
-    """챗봇에 메시지 전송 (OpenAI + 카카오 API)"""
-    session_id = get_or_create_session(request.session_id)
-    response_text, restaurants, menus = await get_response(request.message, session_id)
+@limiter.limit(RateLimits.AI_CHAT)
+async def send_message(request: Request, chat_request: ChatRequest) -> ChatResponse:
+    """챗봇에 메시지 전송 (OpenAI + 카카오 API)
+
+    Rate Limit: 5회/분 (AI API 비용 절감)
+    """
+    session_id = get_or_create_session(chat_request.session_id)
+    response_text, restaurants, menus = await get_response(chat_request.message, session_id)
 
     # Restaurant 객체로 변환
     restaurant_models = None
@@ -458,8 +463,12 @@ async def send_message(request: ChatRequest) -> ChatResponse:
 
 
 @router.get("/session/{session_id}", response_model=SessionInfo)
-async def get_session_info(session_id: str) -> SessionInfo:
-    """세션 정보 조회"""
+@limiter.limit(RateLimits.SESSION)
+async def get_session_info(request: Request, session_id: str) -> SessionInfo:
+    """세션 정보 조회
+
+    Rate Limit: 30회/분
+    """
     if session_id not in sessions:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
 
@@ -471,8 +480,12 @@ async def get_session_info(session_id: str) -> SessionInfo:
 
 
 @router.post("/session/{session_id}/reset", response_model=ResetResponse)
-async def reset_session(session_id: str) -> ResetResponse:
-    """세션 대화 초기화"""
+@limiter.limit(RateLimits.SESSION_MODIFY)
+async def reset_session(request: Request, session_id: str) -> ResetResponse:
+    """세션 대화 초기화
+
+    Rate Limit: 10회/분
+    """
     if session_id not in sessions:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
 
@@ -489,8 +502,12 @@ async def reset_session(session_id: str) -> ResetResponse:
 
 
 @router.delete("/session/{session_id}")
-async def delete_session(session_id: str) -> dict:
-    """세션 삭제"""
+@limiter.limit(RateLimits.SESSION_MODIFY)
+async def delete_session(request: Request, session_id: str) -> dict:
+    """세션 삭제
+
+    Rate Limit: 10회/분
+    """
     if session_id not in sessions:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
 

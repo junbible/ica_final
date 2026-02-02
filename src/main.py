@@ -2,11 +2,14 @@
 
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
 
 from chatbot.api import router as chatbot_router
+from chatbot.rate_limit import limiter, rate_limit_exceeded_handler, RateLimits
 
 # 환경변수 로드
 load_dotenv()
@@ -37,10 +40,19 @@ app = FastAPI(
     - 실시간 스트리밍 응답
     - 대화 히스토리 관리
     - Function Calling을 통한 메뉴/음식점 검색
+
+    ## Rate Limiting
+    - 일반 API: 60회/분
+    - AI 채팅: 10회/분
+    - 세션 조회: 30회/분
     """,
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Rate Limiter 설정
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # CORS 설정
 app.add_middleware(
@@ -56,18 +68,31 @@ app.include_router(chatbot_router)
 
 
 @app.get("/")
-async def root():
-    """API 상태 확인"""
+@limiter.limit(RateLimits.GENERAL)
+async def root(request: Request):
+    """API 상태 확인
+
+    Rate Limit: 60회/분
+    """
     return {
         "status": "running",
         "message": "컨디션 기반 메뉴 추천 챗봇 API",
         "docs": "/docs",
+        "rate_limits": {
+            "general": "60/minute",
+            "ai_chat": "10/minute",
+            "session": "30/minute"
+        }
     }
 
 
 @app.get("/health")
-async def health_check():
-    """헬스체크"""
+@limiter.limit(RateLimits.GENERAL)
+async def health_check(request: Request):
+    """헬스체크
+
+    Rate Limit: 60회/분
+    """
     return {"status": "healthy"}
 
 
