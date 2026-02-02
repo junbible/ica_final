@@ -8,12 +8,14 @@ import { TypingIndicator } from "./TypingIndicator"
 import { QuickReplies } from "./QuickReplies"
 import { ChatInput } from "./ChatInput"
 import { MapCard, type Restaurant } from "./MapCard"
+import { MenuCard, type Menu } from "./MenuCard"
 
 interface Message {
   id: string
   content: string
   isUser: boolean
   timestamp: string
+  menus?: Menu[]
   restaurants?: Restaurant[]
 }
 
@@ -79,6 +81,7 @@ export function ChatContainer() {
         content: data.response,
         isUser: false,
         timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+        menus: data.menus || undefined,
         restaurants: data.restaurants || undefined,
       }
 
@@ -110,7 +113,7 @@ export function ChatContainer() {
   }
 
   return (
-    <Card className="w-full max-w-[420px] mx-auto h-[680px] flex flex-col shadow-2xl shadow-primary/20 border-0 overflow-hidden">
+    <Card className="w-full h-full sm:w-[420px] sm:h-[680px] sm:max-h-[90vh] mx-auto flex flex-col shadow-2xl shadow-primary/20 border-0 sm:rounded-xl rounded-none overflow-hidden">
       {/* 헤더 - 그라데이션 배경 */}
       <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-white py-4 px-5">
         <div className="flex items-center justify-between">
@@ -138,8 +141,8 @@ export function ChatContainer() {
 
       {/* 메시지 영역 */}
       <CardContent className="flex-1 overflow-hidden p-0 bg-gradient-to-b from-secondary/50 to-background">
-        <ScrollArea className="h-full">
-          <div className="p-4 space-y-4">
+        <ScrollArea className="h-full [&>div>div]:!block">
+          <div className="p-4 space-y-4 overflow-x-hidden">
             {messages.map((message) => (
               <div key={message.id}>
                 <MessageBubble
@@ -147,8 +150,13 @@ export function ChatContainer() {
                   isUser={message.isUser}
                   timestamp={message.timestamp}
                 />
+                {/* 메뉴 이미지 카드 */}
+                {message.menus && message.menus.length > 0 && (
+                  <MenuCard menus={message.menus} />
+                )}
+                {/* 맛집 지도 카드 */}
                 {message.restaurants && message.restaurants.length > 0 && (
-                  <div className="ml-10 mt-2">
+                  <div className="ml-8 sm:ml-10 mt-2 mr-2">
                     <MapCard restaurants={message.restaurants} />
                   </div>
                 )}

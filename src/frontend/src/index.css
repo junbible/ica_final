@@ -65,6 +65,7 @@
 /* 커스텀 스크롤바 */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -75,4 +76,20 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #FBBF24;
+}
+
+/* 스크롤바 숨김 (메뉴 카드용) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 모바일 뷰포트 높이 수정 */
+@supports (height: 100dvh) {
+  .h-screen {
+    height: 100dvh;
+  }
 }
