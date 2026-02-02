@@ -1,0 +1,4 @@
+# 필수 패키지 예시
+requests
+sqlalchemy
+psycopg2-binary
