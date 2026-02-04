@@ -122,7 +122,7 @@ export function ChatContainer({ onClose }: ChatContainerProps = {}) {
       <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-white py-4 px-5">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <span className="text-2xl">🍽️</span>
+            <img src="/logo.png" alt="nyam logo" className="w-10 h-10 object-contain bg-white rounded-full p-1" />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-logo">nyam!</span>

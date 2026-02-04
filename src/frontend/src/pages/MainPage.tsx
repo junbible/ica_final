@@ -211,11 +211,10 @@ export function MainPage({ onOpenChat }: MainPageProps) {
               <button
                 key={loc}
                 onClick={() => setSelectedLocation(loc)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedLocation === loc
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedLocation === loc
                     ? "bg-primary text-white"
                     : "bg-secondary text-foreground hover:bg-secondary/80"
-                }`}
+                  }`}
               >
                 {loc}
               </button>
@@ -308,7 +307,7 @@ function SearchHeader({ searchQuery, setSearchQuery, selectedLocation, getCurren
       <div className="max-w-5xl mx-auto px-4 py-3">
         <div className="flex items-center gap-3">
           <h1 className="flex items-center gap-1">
-            <span className="text-2xl">🍽️</span>
+            <img src="/logo.png" alt="nyam logo" className="w-8 h-8 object-contain" />
             <span className="font-logo text-xl text-primary">nyam!</span>
           </h1>
           <div className="relative flex-1">
