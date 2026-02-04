@@ -20,7 +20,7 @@
 | 백엔드 | FastAPI |
 | AI/NLP | OpenAI API, KoNLPy |
 | 프론트엔드 | React, Next.js |
-| 데이터베이스 | PostgreSQL, Elasticsearch |
+| 데이터베이스 | Supabase|
 
 ## 프로젝트 구조
 

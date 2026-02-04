@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { RotateCcw, Sparkles } from "lucide-react"
+import { RotateCcw, Sparkles, X } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -8,12 +8,14 @@ import { TypingIndicator } from "./TypingIndicator"
 import { QuickReplies } from "./QuickReplies"
 import { ChatInput } from "./ChatInput"
 import { MapCard, type Restaurant } from "./MapCard"
+import { MenuCard, type Menu } from "./MenuCard"
 
 interface Message {
   id: string
   content: string
   isUser: boolean
   timestamp: string
+  menus?: Menu[]
   restaurants?: Restaurant[]
 }
 
@@ -34,7 +36,11 @@ const QUICK_REPLIES = [
   "가볍게 먹고 싶어요 🥗"
 ]
 
-export function ChatContainer() {
+interface ChatContainerProps {
+  onClose?: () => void
+}
+
+export function ChatContainer({ onClose }: ChatContainerProps = {}) {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
   const [isLoading, setIsLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -79,6 +85,7 @@ export function ChatContainer() {
         content: data.response,
         isUser: false,
         timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+        menus: data.menus || undefined,
         restaurants: data.restaurants || undefined,
       }
 
@@ -110,36 +117,49 @@ export function ChatContainer() {
   }
 
   return (
-    <Card className="w-full max-w-[420px] mx-auto h-[680px] flex flex-col shadow-2xl shadow-primary/20 border-0 overflow-hidden">
+    <Card className="w-full h-full sm:w-[420px] sm:h-[680px] sm:max-h-[90vh] mx-auto flex flex-col shadow-2xl shadow-primary/20 border-0 sm:rounded-xl rounded-none overflow-hidden">
       {/* 헤더 - 그라데이션 배경 */}
       <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-white py-4 px-5">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <span className="text-2xl">🍽️</span>
+            <img src="/logo.png" alt="nyam logo" className="w-10 h-10 object-contain bg-white rounded-full p-1" />
             <div>
               <div className="flex items-center gap-1.5">
-                냠냠 추천봇
+                <span className="font-logo">nyam!</span>
                 <Sparkles className="w-4 h-4" />
               </div>
               <p className="text-xs font-normal opacity-90">컨디션 맞춤 메뉴 추천</p>
             </div>
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleReset}
-            title="대화 초기화"
-            className="text-white hover:bg-white/20 rounded-full"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleReset}
+              title="대화 초기화"
+              className="text-white hover:bg-white/20 rounded-full"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                title="닫기"
+                className="text-white hover:bg-white/20 rounded-full hidden sm:flex"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
 
       {/* 메시지 영역 */}
       <CardContent className="flex-1 overflow-hidden p-0 bg-gradient-to-b from-secondary/50 to-background">
-        <ScrollArea className="h-full">
-          <div className="p-4 space-y-4">
+        <ScrollArea className="h-full [&>div>div]:!block">
+          <div className="p-4 space-y-4 overflow-x-hidden">
             {messages.map((message) => (
               <div key={message.id}>
                 <MessageBubble
@@ -147,8 +167,13 @@ export function ChatContainer() {
                   isUser={message.isUser}
                   timestamp={message.timestamp}
                 />
+                {/* 메뉴 이미지 카드 */}
+                {message.menus && message.menus.length > 0 && (
+                  <MenuCard menus={message.menus} />
+                )}
+                {/* 맛집 지도 카드 */}
                 {message.restaurants && message.restaurants.length > 0 && (
-                  <div className="ml-10 mt-2">
+                  <div className="ml-8 sm:ml-10 mt-2 mr-2">
                     <MapCard restaurants={message.restaurants} />
                   </div>
                 )}
