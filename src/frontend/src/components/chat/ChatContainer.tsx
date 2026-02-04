@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { RotateCcw, Sparkles } from "lucide-react"
+import { RotateCcw, Sparkles, X } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -36,7 +36,11 @@ const QUICK_REPLIES = [
   "가볍게 먹고 싶어요 🥗"
 ]
 
-export function ChatContainer() {
+interface ChatContainerProps {
+  onClose?: () => void
+}
+
+export function ChatContainer({ onClose }: ChatContainerProps = {}) {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
   const [isLoading, setIsLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -121,21 +125,34 @@ export function ChatContainer() {
             <span className="text-2xl">🍽️</span>
             <div>
               <div className="flex items-center gap-1.5">
-                냠냠 추천봇
+                <span className="font-logo">nyam!</span>
                 <Sparkles className="w-4 h-4" />
               </div>
               <p className="text-xs font-normal opacity-90">컨디션 맞춤 메뉴 추천</p>
             </div>
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleReset}
-            title="대화 초기화"
-            className="text-white hover:bg-white/20 rounded-full"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleReset}
+              title="대화 초기화"
+              className="text-white hover:bg-white/20 rounded-full"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                title="닫기"
+                className="text-white hover:bg-white/20 rounded-full hidden sm:flex"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
 
