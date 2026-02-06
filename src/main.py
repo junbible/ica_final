@@ -1,15 +1,21 @@
 """FastAPI 메인 애플리케이션"""
 
 import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
 
 from chatbot.api import router as chatbot_router
 from chatbot.rate_limit import limiter, rate_limit_exceeded_handler, RateLimits
+
+# 프론트엔드 빌드 디렉토리
+FRONTEND_DIR = Path(__file__).parent / "frontend" / "dist"
 
 # 환경변수 로드
 load_dotenv()
@@ -66,10 +72,15 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(chatbot_router)
 
+# 프론트엔드 정적 파일 서빙
+if FRONTEND_DIR.exists():
+    # assets 폴더 (JS, CSS 등)
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
 
-@app.get("/")
+
+@app.get("/api")
 @limiter.limit(RateLimits.GENERAL)
-async def root(request: Request):
+async def api_root(request: Request):
     """API 상태 확인
 
     Rate Limit: 60회/분
@@ -86,7 +97,7 @@ async def root(request: Request):
     }
 
 
-@app.get("/health")
+@app.get("/api/health")
 @limiter.limit(RateLimits.GENERAL)
 async def health_check(request: Request):
     """헬스체크
@@ -94,6 +105,37 @@ async def health_check(request: Request):
     Rate Limit: 60회/분
     """
     return {"status": "healthy"}
+
+
+# SPA 라우팅: 프론트엔드 index.html 서빙
+@app.get("/")
+async def serve_root():
+    """프론트엔드 메인 페이지"""
+    if FRONTEND_DIR.exists():
+        return FileResponse(FRONTEND_DIR / "index.html")
+    return {"message": "Frontend not built. Run 'npm run build' in frontend directory."}
+
+
+@app.get("/logo.png")
+async def serve_logo():
+    """로고 이미지 서빙"""
+    logo_path = FRONTEND_DIR / "logo.png"
+    if logo_path.exists():
+        return FileResponse(logo_path)
+    return {"error": "Logo not found"}
+
+
+@app.get("/{full_path:path}")
+async def serve_spa(full_path: str):
+    """SPA 라우팅 - 모든 경로를 index.html로 리다이렉트"""
+    if FRONTEND_DIR.exists():
+        # 정적 파일이 존재하면 해당 파일 반환
+        file_path = FRONTEND_DIR / full_path
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(file_path)
+        # 그 외에는 index.html 반환 (SPA 라우팅)
+        return FileResponse(FRONTEND_DIR / "index.html")
+    return {"message": "Frontend not built"}
 
 
 if __name__ == "__main__":
