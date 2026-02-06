@@ -144,7 +144,19 @@ async def serve_logo():
 
 @app.get("/{full_path:path}")
 async def serve_spa(full_path: str):
-    """SPA 라우팅 - 모든 경로를 index.html로 리다이렉트"""
+    """SPA 라우팅 - 모든 경로를 index.html로 리다이렉트
+
+    API 경로는 제외 (라우터에서 처리)
+    """
+    # API/Auth 경로는 이 핸들러에서 처리하지 않음
+    if full_path.startswith(("api/", "auth/", "docs", "openapi.json", "redoc")):
+        # 404 반환 - 라우터에서 처리되지 않은 API 경로
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Not Found"}
+        )
+
     if FRONTEND_DIR.exists():
         # 정적 파일이 존재하면 해당 파일 반환
         file_path = FRONTEND_DIR / full_path
