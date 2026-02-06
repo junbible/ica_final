@@ -5,18 +5,25 @@ import httpx
 from typing import Optional
 from dataclasses import dataclass
 
+# 기본 URL (Railway 배포 시 자동 감지)
+BASE_URL = os.getenv("RAILWAY_PUBLIC_DOMAIN", "")
+if BASE_URL:
+    BASE_URL = f"https://{BASE_URL}"
+else:
+    BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+
 # 카카오 OAuth 설정
 KAKAO_CLIENT_ID = os.getenv("KAKAO_REST_API_KEY", "")  # 기존 REST API 키 재사용
 KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET", "")
-KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "http://localhost:8000/auth/kakao/callback")
+KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", f"{BASE_URL}/auth/kakao/callback")
 
 # 구글 OAuth 설정
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", f"{BASE_URL}/auth/google/callback")
 
 # 프론트엔드 URL (OAuth 완료 후 리다이렉트)
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL = os.getenv("FRONTEND_URL", BASE_URL)
 
 
 @dataclass
