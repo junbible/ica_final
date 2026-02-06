@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import { Search, MapPin, Star, MessageCircle, Navigation, ChevronRight, TrendingUp, Clock, Flame } from "lucide-react"
+import { Search, MapPin, Star, MessageCircle, Navigation, ChevronRight, TrendingUp, Clock, Flame, User } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/AuthContext"
+import { UserMenu } from "@/components/auth/UserMenu"
+import { LoginDialog } from "@/components/auth/LoginDialog"
 
 // 시간대 계산
 function getTimeContext() {
@@ -97,10 +101,12 @@ interface MainPageProps {
 
 export function MainPage({ onOpenChat }: MainPageProps) {
   const navigate = useNavigate()
+  const { isAuthenticated } = useAuth()
   const [selectedLocation, setSelectedLocation] = useState("강남")
   const [searchQuery, setSearchQuery] = useState("")
   const [showTooltip, setShowTooltip] = useState(true)
   const [isLocating, setIsLocating] = useState(false)
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
   const timeContext = getTimeContext()
 
   useEffect(() => {
@@ -145,18 +151,24 @@ export function MainPage({ onOpenChat }: MainPageProps) {
           selectedLocation={selectedLocation}
           getCurrentLocation={getCurrentLocation}
           isLocating={isLocating}
+          isAuthenticated={isAuthenticated}
+          onLoginClick={() => setShowLoginDialog(true)}
         />
         <main className="max-w-5xl mx-auto px-4 py-4">
           <h2 className="text-lg font-bold mb-4">'{searchQuery}' 검색 결과 ({filtered.length})</h2>
           <RestaurantGrid restaurants={filtered} navigate={navigate} />
         </main>
         <ChatFAB onOpenChat={onOpenChat} showTooltip={false} />
+        <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      {/* 로그인 다이얼로그 */}
+      <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
+
       {/* 헤더 */}
       <SearchHeader
         searchQuery={searchQuery}
@@ -164,6 +176,8 @@ export function MainPage({ onOpenChat }: MainPageProps) {
         selectedLocation={selectedLocation}
         getCurrentLocation={getCurrentLocation}
         isLocating={isLocating}
+        isAuthenticated={isAuthenticated}
+        onLoginClick={() => setShowLoginDialog(true)}
       />
 
       <main className="max-w-5xl mx-auto">
@@ -295,12 +309,14 @@ export function MainPage({ onOpenChat }: MainPageProps) {
 }
 
 // 검색 헤더 컴포넌트
-function SearchHeader({ searchQuery, setSearchQuery, selectedLocation, getCurrentLocation, isLocating }: {
+function SearchHeader({ searchQuery, setSearchQuery, selectedLocation, getCurrentLocation, isLocating, isAuthenticated, onLoginClick }: {
   searchQuery: string
   setSearchQuery: (v: string) => void
   selectedLocation: string
   getCurrentLocation: () => void
   isLocating: boolean
+  isAuthenticated: boolean
+  onLoginClick: () => void
 }) {
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-border shadow-sm">
@@ -330,6 +346,19 @@ function SearchHeader({ searchQuery, setSearchQuery, selectedLocation, getCurren
             )}
             <span className="font-medium hidden sm:inline">{selectedLocation}</span>
           </button>
+          {isAuthenticated ? (
+            <UserMenu />
+          ) : (
+            <Button
+              onClick={onLoginClick}
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <User className="w-4 h-4" />
+              <span className="hidden sm:inline">로그인</span>
+            </Button>
+          )}
         </div>
       </div>
     </header>

@@ -4,6 +4,7 @@ import { MainPage, RestaurantDetail } from "./pages"
 import { ChatContainer } from "./components/chat"
 import { OnboardingDialog } from "./components/onboarding/OnboardingDialog"
 import { useOnboarding } from "./hooks/useOnboarding"
+import { AuthProvider } from "./contexts/AuthContext"
 import { X } from "lucide-react"
 
 function AppContent() {
@@ -69,9 +70,11 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 
