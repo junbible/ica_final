@@ -2,13 +2,21 @@ import { useState } from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { MainPage, RestaurantDetail } from "./pages"
 import { ChatContainer } from "./components/chat"
+import { OnboardingDialog } from "./components/onboarding/OnboardingDialog"
+import { useOnboarding } from "./hooks/useOnboarding"
 import { X } from "lucide-react"
 
 function AppContent() {
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const { hasCompletedOnboarding, completeOnboarding } = useOnboarding()
 
   return (
     <div className="min-h-screen">
+      {/* 온보딩 다이얼로그 */}
+      <OnboardingDialog
+        open={!hasCompletedOnboarding}
+        onComplete={completeOnboarding}
+      />
       <Routes>
         <Route
           path="/"
