@@ -1,8 +1,10 @@
 import { useState } from "react"
-import { LogOut, User as UserIcon, ChevronDown } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { LogOut, User as UserIcon, ChevronDown, Settings } from "lucide-react"
 import { useAuth } from "@/contexts/AuthContext"
 
 export function UserMenu() {
+  const navigate = useNavigate()
   const { user, logout, isLoading } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -59,6 +61,14 @@ export function UserMenu() {
                 {user.email || `${user.provider} 로그인`}
               </p>
             </div>
+
+            <button
+              onClick={() => { navigate("/mypage"); setIsOpen(false) }}
+              className="w-full px-4 py-2 text-left text-sm hover:bg-secondary flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              마이페이지
+            </button>
 
             <button
               onClick={handleLogout}

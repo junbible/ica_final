@@ -50,6 +50,7 @@ class KakaoOAuth:
             "client_id": KAKAO_CLIENT_ID,
             "redirect_uri": KAKAO_REDIRECT_URI,
             "response_type": "code",
+            "scope": "profile_nickname,profile_image",
             "state": state,
         }
         query = "&".join(f"{k}={v}" for k, v in params.items())
