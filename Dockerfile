@@ -29,4 +29,5 @@ WORKDIR /app/src
 
 EXPOSE 8080
 
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Railway sets PORT env variable
+CMD python -m uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}
