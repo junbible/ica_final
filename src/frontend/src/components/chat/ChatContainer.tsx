@@ -19,7 +19,8 @@ interface Message {
   restaurants?: Restaurant[]
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
+// 프로덕션에서는 같은 도메인에서 서빙되므로 빈 문자열 사용
+const API_URL = import.meta.env.VITE_API_URL || ""
 
 const INITIAL_MESSAGE: Message = {
   id: "welcome",

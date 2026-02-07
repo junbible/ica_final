@@ -8,6 +8,11 @@ __pycache__/
 .venv/
 venv/
 
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
 # Node
 node_modules/
 dist/

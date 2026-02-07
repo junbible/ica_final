@@ -1,20 +1,30 @@
 import { useState } from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-import { MainPage, RestaurantDetail } from "./pages"
+import { MainPage, RestaurantDetail, MyPage } from "./pages"
 import { ChatContainer } from "./components/chat"
+import { OnboardingDialog } from "./components/onboarding/OnboardingDialog"
+import { useOnboarding } from "./hooks/useOnboarding"
+import { AuthProvider } from "./contexts/AuthContext"
 import { X } from "lucide-react"
 
 function AppContent() {
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const { hasCompletedOnboarding, completeOnboarding } = useOnboarding()
 
   return (
     <div className="min-h-screen">
+      {/* 온보딩 다이얼로그 */}
+      <OnboardingDialog
+        open={!hasCompletedOnboarding}
+        onComplete={completeOnboarding}
+      />
       <Routes>
         <Route
           path="/"
           element={<MainPage onOpenChat={() => setIsChatOpen(true)} />}
         />
         <Route path="/restaurant/:id" element={<RestaurantDetail />} />
+        <Route path="/mypage" element={<MyPage />} />
         <Route
           path="/chat"
           element={
@@ -61,9 +71,11 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

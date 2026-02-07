@@ -1,5 +1,109 @@
 # Release Notes
 
+## v1.2.0 (2026-02-06)
+
+### 🎉 주요 기능
+
+#### 온보딩 팝업
+- **첫 방문 감지** - localStorage 기반 온보딩 상태 관리
+- **위치 권한 요청** - 브라우저 Geolocation API 연동
+- **3단계 플로우** - 환영 → 위치 권한 → 완료
+
+#### 소셜 로그인 (카카오)
+- **카카오 OAuth 2.0** - REST API 연동
+- **프로필 동기화** - 닉네임, 프로필 사진 가져오기
+- **JWT 토큰 인증** - httpOnly 쿠키 기반 보안
+- **자동 토큰 갱신** - Refresh Token 지원
+
+#### 마이페이지
+- **프로필 표시** - 카카오 닉네임, 프로필 사진
+- **로그인 상태 표시** - 연동된 소셜 계정 표시
+- **로그아웃** - 세션 종료 및 토큰 삭제
+
+---
+
+### 🔐 백엔드 인증 인프라
+
+#### 데이터베이스
+- **SQLAlchemy ORM** - User, RefreshToken 모델
+- **PostgreSQL/SQLite** - 환경별 자동 전환
+
+#### Auth API 엔드포인트
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/auth/kakao/login` | 카카오 로그인 시작 |
+| GET | `/auth/kakao/callback` | 카카오 콜백 처리 |
+| GET | `/auth/google/login` | 구글 로그인 시작 |
+| GET | `/auth/google/callback` | 구글 콜백 처리 |
+| GET | `/auth/me` | 현재 사용자 정보 |
+| POST | `/auth/refresh` | 토큰 갱신 |
+| POST | `/auth/logout` | 로그아웃 |
+
+---
+
+### 📁 변경된 파일
+
+```
+src/
+├── auth/                          # 인증 모듈 (신규)
+│   ├── __init__.py
+│   ├── api.py                     # Auth 라우터
+│   ├── dependencies.py            # get_current_user
+│   ├── jwt_handler.py             # JWT 토큰 처리
+│   ├── oauth.py                   # 카카오/구글 OAuth
+│   └── schemas.py                 # Pydantic 스키마
+├── database/                      # 데이터베이스 (신규)
+│   ├── __init__.py
+│   ├── connection.py              # DB 연결 설정
+│   └── models.py                  # SQLAlchemy 모델
+├── main.py                        # Auth 라우터 등록, CORS 업데이트
+└── frontend/src/
+    ├── App.tsx                    # AuthProvider, 라우트 추가
+    ├── contexts/
+    │   └── AuthContext.tsx        # 인증 상태 Context (신규)
+    ├── lib/
+    │   └── auth.ts                # Auth API 클라이언트 (신규)
+    ├── hooks/
+    │   ├── useOnboarding.ts       # 온보딩 상태 훅 (신규)
+    │   └── useGeolocation.ts      # 위치 권한 훅 (신규)
+    ├── components/
+    │   ├── auth/                  # 인증 컴포넌트 (신규)
+    │   │   ├── LoginDialog.tsx    # 로그인 다이얼로그
+    │   │   ├── SocialLoginButton.tsx
+    │   │   └── UserMenu.tsx       # 사용자 메뉴
+    │   └── onboarding/
+    │       └── OnboardingDialog.tsx # 온보딩 팝업 (신규)
+    └── pages/
+        ├── MainPage.tsx           # 로그인 버튼 추가
+        └── MyPage.tsx             # 마이페이지 (신규)
+```
+
+---
+
+### ⚙️ 환경변수
+
+```
+# Railway 설정 필요
+KAKAO_REST_API_KEY=<카카오 REST API 키>
+KAKAO_CLIENT_SECRET=<카카오 Client Secret>
+JWT_SECRET_KEY=<JWT 시크릿 키>
+
+# 구글 OAuth (선택)
+GOOGLE_CLIENT_ID=<구글 클라이언트 ID>
+GOOGLE_CLIENT_SECRET=<구글 클라이언트 시크릿>
+```
+
+---
+
+### 📌 다음 버전 예정
+
+- [ ] 구글 로그인 연동
+- [ ] 즐겨찾기 기능 (DB 연동)
+- [ ] 최근 본 맛집 기록
+- [ ] 푸시 알림
+
+---
+
 ## v1.1.0 (2026-02-04)
 
 ### 🎉 주요 기능
@@ -174,9 +278,9 @@ Dockerfile
 
 ---
 
-### 📌 다음 버전 예정
+### 📌 다음 버전 예정 (v1.1.0 기준)
 
 - [ ] Redis 기반 분산 Rate Limiting
-- [ ] 사용자 인증 (로그인)
+- [x] 사용자 인증 (로그인) → v1.2.0 완료
 - [ ] 메뉴 즐겨찾기 기능
 - [ ] 리뷰/평점 연동
