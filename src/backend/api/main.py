@@ -26,7 +26,7 @@ app = FastAPI(
 # CORS 설정 (프론트엔드에서 접근 허용)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 개발 중에는 모든 origin 허용
+    allow_origins=["http://localhost:5173", "http://localhost:8000", "https://nyam-production.up.railway.app"],  # 개발 중에는 모든 origin 허용
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -117,7 +117,7 @@ CONDITION_MESSAGES = {
 # API 엔드포인트
 # =============================================
 
-@app.get("/")
+@app.get("/api")
 def root():
     """API 상태 확인"""
     return {
