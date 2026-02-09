@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
 import { getCurrentUser, logout as apiLogout, refreshToken, type User } from "@/lib/auth"
+import { useToast } from "@/components/ui/toast"
 
 interface AuthContextType {
   user: User | null
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { showToast } = useToast()
 
   const refreshUser = useCallback(async () => {
     try {
@@ -33,7 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await apiLogout()
     setUser(null)
-  }, [])
+    showToast("로그아웃되었습니다", "info")
+  }, [showToast])
 
   // 초기 로드 시 사용자 정보 확인
   useEffect(() => {
@@ -66,14 +69,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (authSuccess === "true") {
       // 로그인 성공 - 사용자 정보 새로고침
       refreshUser()
+      showToast("로그인되었습니다", "success")
       // URL에서 파라미터 제거
       window.history.replaceState({}, "", window.location.pathname)
     } else if (authError) {
-      console.error("Auth error:", authError)
+      // 에러 메시지 변환
+      const errorMessages: Record<string, string> = {
+        token_failed: "로그인에 실패했습니다. 다시 시도해주세요.",
+        user_info_failed: "사용자 정보를 가져올 수 없습니다.",
+        cancelled: "로그인이 취소되었습니다.",
+      }
+      const message = errorMessages[authError] || "로그인 중 오류가 발생했습니다."
+      showToast(message, "error")
       // URL에서 파라미터 제거
       window.history.replaceState({}, "", window.location.pathname)
     }
-  }, [refreshUser])
+  }, [refreshUser, showToast])
 
   return (
     <AuthContext.Provider

@@ -6,6 +6,7 @@ import { OnboardingDialog } from "./components/onboarding/OnboardingDialog"
 import { useOnboarding } from "./hooks/useOnboarding"
 import { AuthProvider } from "./contexts/AuthContext"
 import { FavoritesProvider } from "./contexts/FavoritesContext"
+import { ToastProvider } from "./components/ui/toast"
 import { X } from "lucide-react"
 
 function AppContent() {
@@ -72,13 +73,15 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <FavoritesProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </FavoritesProvider>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <FavoritesProvider>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </FavoritesProvider>
+      </AuthProvider>
+    </ToastProvider>
   )
 }
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
 import { getFavorites, addFavorite, removeFavorite, type Favorite, type FavoriteCreate } from "@/lib/favorites"
 import { useAuth } from "./AuthContext"
+import { useToast } from "@/components/ui/toast"
 
 interface FavoritesContextType {
   favorites: Favorite[]
@@ -14,6 +15,7 @@ const FavoritesContext = createContext<FavoritesContextType | undefined>(undefin
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
+  const { showToast } = useToast()
   const [favorites, setFavorites] = useState<Favorite[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -47,23 +49,29 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 
     const existing = favorites.find(f => f.restaurant_id === data.restaurant_id)
 
-    if (existing) {
-      // 삭제
-      const success = await removeFavorite(data.restaurant_id)
-      if (success) {
-        setFavorites(prev => prev.filter(f => f.restaurant_id !== data.restaurant_id))
-        return true
+    try {
+      if (existing) {
+        // 삭제
+        const success = await removeFavorite(data.restaurant_id)
+        if (success) {
+          setFavorites(prev => prev.filter(f => f.restaurant_id !== data.restaurant_id))
+          showToast("즐겨찾기에서 삭제되었습니다", "info")
+          return true
+        }
+      } else {
+        // 추가
+        const newFavorite = await addFavorite(data)
+        if (newFavorite) {
+          setFavorites(prev => [newFavorite, ...prev])
+          showToast("즐겨찾기에 추가되었습니다", "success")
+          return true
+        }
       }
-    } else {
-      // 추가
-      const newFavorite = await addFavorite(data)
-      if (newFavorite) {
-        setFavorites(prev => [newFavorite, ...prev])
-        return true
-      }
+    } catch {
+      showToast("오류가 발생했습니다", "error")
     }
     return false
-  }, [isAuthenticated, favorites])
+  }, [isAuthenticated, favorites, showToast])
 
   return (
     <FavoritesContext.Provider
