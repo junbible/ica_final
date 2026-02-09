@@ -2,8 +2,7 @@
 
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, Text, BigInteger
 from sqlalchemy.orm import relationship
 
 from .connection import Base
@@ -14,10 +13,11 @@ def generate_uuid():
 
 
 class User(Base):
-    """사용자 모델"""
+    """사용자 모델 - Supabase의 기존 users 테이블과 호환"""
     __tablename__ = "users"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    # Supabase는 INTEGER id 사용
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     email = Column(String(255), unique=True, nullable=True, index=True)
     nickname = Column(String(100), nullable=True)
     profile_image_url = Column(Text, nullable=True)
@@ -44,7 +44,7 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token_hash = Column(String(255), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -62,7 +62,7 @@ class Favorite(Base):
     __tablename__ = "favorites"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
-    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     restaurant_id = Column(String(50), nullable=False, index=True)  # 맛집 ID
     restaurant_name = Column(String(200), nullable=False)  # 맛집 이름
     restaurant_image = Column(Text, nullable=True)  # 맛집 이미지 URL
