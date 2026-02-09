@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/AuthContext"
 import { UserMenu } from "@/components/auth/UserMenu"
 import { LoginDialog } from "@/components/auth/LoginDialog"
+import { FavoriteButton } from "@/components/FavoriteButton"
 
 // 시간대 계산
 function getTimeContext() {
@@ -156,7 +157,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
         />
         <main className="max-w-5xl mx-auto px-4 py-4">
           <h2 className="text-lg font-bold mb-4">'{searchQuery}' 검색 결과 ({filtered.length})</h2>
-          <RestaurantGrid restaurants={filtered} navigate={navigate} />
+          <RestaurantGrid restaurants={filtered} navigate={navigate} onLoginRequired={() => setShowLoginDialog(true)} />
         </main>
         <ChatFAB onOpenChat={onOpenChat} showTooltip={false} />
         <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
@@ -241,7 +242,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
           <SectionHeader title="지금 핫한 맛집" icon={<Flame className="w-5 h-5 text-red-500" />} />
           <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
             {hotRestaurants.map((r) => (
-              <RestaurantCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} />
+              <RestaurantCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onLoginRequired={() => setShowLoginDialog(true)} />
             ))}
           </div>
         </section>
@@ -256,7 +257,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
             <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
               {collection.restaurants.map((id) => {
                 const r = getRestaurantById(id)
-                return r ? <RestaurantCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} /> : null
+                return r ? <RestaurantCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onLoginRequired={() => setShowLoginDialog(true)} /> : null
               })}
             </div>
           </section>
@@ -287,7 +288,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
             <SectionHeader title="신규 오픈" icon={<Clock className="w-5 h-5 text-blue-500" />} />
             <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
               {newRestaurants.map((r) => (
-                <RestaurantCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} isNew />
+                <RestaurantCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} isNew onLoginRequired={() => setShowLoginDialog(true)} />
               ))}
             </div>
           </section>
@@ -297,7 +298,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
         <section className="py-6">
           <SectionHeader title={`${selectedLocation} 맛집`} icon={<TrendingUp className="w-5 h-5 text-primary" />} actionText="전체보기" />
           <div className="px-4">
-            <RestaurantGrid restaurants={nearbyRestaurants} navigate={navigate} />
+            <RestaurantGrid restaurants={nearbyRestaurants} navigate={navigate} onLoginRequired={() => setShowLoginDialog(true)} />
           </div>
         </section>
       </main>
@@ -383,10 +384,11 @@ function SectionHeader({ title, icon, actionText }: { title: string; icon?: Reac
 }
 
 // 가로 스크롤 카드
-function RestaurantCardHorizontal({ restaurant, onClick, isNew }: {
+function RestaurantCardHorizontal({ restaurant, onClick, isNew, onLoginRequired }: {
   restaurant: typeof RESTAURANTS[0]
   onClick: () => void
   isNew?: boolean
+  onLoginRequired?: () => void
 }) {
   return (
     <Card
@@ -405,6 +407,15 @@ function RestaurantCardHorizontal({ restaurant, onClick, isNew }: {
         {restaurant.isHot && !isNew && (
           <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">HOT</span>
         )}
+        <FavoriteButton
+          restaurantId={String(restaurant.id)}
+          restaurantName={restaurant.name}
+          restaurantImage={restaurant.image}
+          restaurantCategory={restaurant.category}
+          restaurantRating={String(restaurant.rating)}
+          onLoginRequired={onLoginRequired}
+          className="absolute top-2 right-2"
+        />
       </div>
       <div className="p-2.5">
         <h4 className="font-bold text-sm truncate">{restaurant.name}</h4>
@@ -420,7 +431,11 @@ function RestaurantCardHorizontal({ restaurant, onClick, isNew }: {
 }
 
 // 그리드 카드
-function RestaurantGrid({ restaurants, navigate }: { restaurants: typeof RESTAURANTS; navigate: ReturnType<typeof useNavigate> }) {
+function RestaurantGrid({ restaurants, navigate, onLoginRequired }: {
+  restaurants: typeof RESTAURANTS
+  navigate: ReturnType<typeof useNavigate>
+  onLoginRequired?: () => void
+}) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {restaurants.map((r) => (
@@ -441,6 +456,15 @@ function RestaurantGrid({ restaurants, navigate }: { restaurants: typeof RESTAUR
             {r.isHot && (
               <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">HOT</span>
             )}
+            <FavoriteButton
+              restaurantId={String(r.id)}
+              restaurantName={r.name}
+              restaurantImage={r.image}
+              restaurantCategory={r.category}
+              restaurantRating={String(r.rating)}
+              onLoginRequired={onLoginRequired}
+              className="absolute top-2 right-2"
+            />
           </div>
           <div className="p-2.5">
             <h4 className="font-bold text-sm truncate">{r.name}</h4>

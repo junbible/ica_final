@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from chatbot.api import router as chatbot_router
 from chatbot.rate_limit import limiter, rate_limit_exceeded_handler, RateLimits
 from auth import auth_router
+from favorites import favorites_router
 from database.connection import init_db
 
 # 프론트엔드 빌드 디렉토리
@@ -88,6 +89,7 @@ app.add_middleware(
 # 라우터 등록
 app.include_router(chatbot_router)
 app.include_router(auth_router)
+app.include_router(favorites_router)
 
 # 프론트엔드 정적 파일 서빙
 if FRONTEND_DIR.exists():

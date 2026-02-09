@@ -5,6 +5,7 @@ import { ChatContainer } from "./components/chat"
 import { OnboardingDialog } from "./components/onboarding/OnboardingDialog"
 import { useOnboarding } from "./hooks/useOnboarding"
 import { AuthProvider } from "./contexts/AuthContext"
+import { FavoritesProvider } from "./contexts/FavoritesContext"
 import { X } from "lucide-react"
 
 function AppContent() {
@@ -72,9 +73,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <FavoritesProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </FavoritesProvider>
     </AuthProvider>
   )
 }
