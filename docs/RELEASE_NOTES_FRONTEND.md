@@ -1,5 +1,110 @@
 # Release Notes
 
+## v1.3.0 (2026-02-09)
+
+### 🎉 주요 기능
+
+#### PWA 지원
+- **앱 설치** - 모바일/데스크톱에서 홈 화면에 추가 가능
+- **오프라인 지원** - Service Worker로 정적 에셋 캐싱
+- **이미지 캐싱** - Unsplash 이미지 30일, Kakao API 1시간 캐싱
+- **PWA 아이콘** - 192x192, 512x512, Apple Touch Icon
+
+#### 토스트 알림
+- **로그인 알림** - 성공/실패 시 한국어 메시지 표시
+- **로그아웃 알림** - "로그아웃되었습니다"
+- **즐겨찾기 알림** - 추가/삭제 시 피드백
+- **에러 메시지** - 친절한 한국어 오류 메시지
+
+#### 이미지 최적화
+- **Lazy Loading** - Intersection Observer 기반 지연 로딩
+- **Shimmer 효과** - 이미지 로딩 중 애니메이션
+- **URL 최적화** - Unsplash 이미지 크기/품질 자동 조정
+- **에러 처리** - 로딩 실패 시 🍽️ placeholder
+
+#### 챗봇 → 상세페이지 연결
+- **앱 맛집 매칭** - 챗봇 추천 레스토랑과 앱 데이터 연동
+- **"앱 맛집" 배지** - 매칭된 레스토랑 표시
+- **원클릭 이동** - 상세보기 버튼으로 상세페이지 이동
+
+---
+
+### 🔧 개선사항
+
+#### 로딩 상태 개선
+- **소셜 로그인 버튼** - 클릭 시 스피너 표시
+- **버튼 비활성화** - 중복 클릭 방지
+
+#### 레스토랑 데이터 리팩토링
+- **공유 데이터 모듈** - `src/data/restaurants.ts`
+- **18개 레스토랑 상세정보** - 주소, 전화, 영업시간, 메뉴, 리뷰, 좌표
+- **헬퍼 함수** - `getRestaurantById`, `searchRestaurants` 등
+
+#### 상세페이지 개선
+- **FavoriteButton 연동** - 즐겨찾기 기능 통합
+- **토스트 알림** - 공유, 주소 복사, 예약 시 피드백
+- **404 처리** - 존재하지 않는 레스토랑 안내
+- **태그 표시** - 해시태그 스타일 태그 UI
+
+---
+
+### 🐛 버그 수정
+
+#### 데이터베이스 스키마 호환성
+- **User.id 타입 수정** - VARCHAR(36) → BigInteger
+- **Supabase 호환** - 기존 INTEGER 스키마와 호환
+- **외래 키 수정** - RefreshToken, Favorite의 user_id 타입 변경
+
+---
+
+### 📁 변경된 파일
+
+```
+src/
+├── database/
+│   └── models.py                  # BigInteger id로 변경
+└── frontend/
+    ├── index.html                 # PWA 메타 태그
+    ├── vite.config.ts             # vite-plugin-pwa 설정
+    ├── public/
+    │   ├── pwa-192x192.png        # PWA 아이콘 (신규)
+    │   ├── pwa-512x512.png        # PWA 아이콘 (신규)
+    │   └── apple-touch-icon.png   # iOS 아이콘 (신규)
+    ├── scripts/
+    │   └── generate-pwa-icons.js  # 아이콘 생성 스크립트 (신규)
+    └── src/
+        ├── index.css              # shimmer 애니메이션
+        ├── data/
+        │   └── restaurants.ts     # 공유 레스토랑 데이터 (신규)
+        ├── components/
+        │   ├── ui/
+        │   │   ├── toast.tsx      # 토스트 컴포넌트 (신규)
+        │   │   └── lazy-image.tsx # 지연 로딩 이미지 (신규)
+        │   ├── auth/
+        │   │   └── SocialLoginButton.tsx  # 로딩 상태 추가
+        │   └── chat/
+        │       └── MapCard.tsx    # 상세페이지 연결
+        ├── contexts/
+        │   ├── AuthContext.tsx    # 토스트 알림 추가
+        │   └── FavoritesContext.tsx # 토스트 알림 추가
+        ├── pages/
+        │   ├── MainPage.tsx       # LazyImage 적용
+        │   ├── MyPage.tsx         # LazyImage 적용
+        │   └── RestaurantDetail.tsx # 전면 개편
+        └── App.tsx                # ToastProvider 추가
+```
+
+---
+
+### 📌 다음 버전 예정
+
+- [ ] 구글 로그인 연동
+- [ ] 최근 본 맛집 기록
+- [ ] 푸시 알림
+- [ ] Redis 기반 분산 Rate Limiting
+
+---
+
 ## v1.2.0 (2026-02-06)
 
 ### 🎉 주요 기능
@@ -98,7 +203,7 @@ GOOGLE_CLIENT_SECRET=<구글 클라이언트 시크릿>
 ### 📌 다음 버전 예정
 
 - [ ] 구글 로그인 연동
-- [ ] 즐겨찾기 기능 (DB 연동)
+- [x] 즐겨찾기 기능 (DB 연동) → v1.3.0 완료
 - [ ] 최근 본 맛집 기록
 - [ ] 푸시 알림
 

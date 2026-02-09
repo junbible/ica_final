@@ -224,7 +224,7 @@ export function MyPage() {
 
         {/* 앱 정보 */}
         <p className="text-center text-xs text-muted-foreground mt-8">
-          nyam! v1.2.0
+          nyam! v1.3.0
         </p>
       </main>
     </div>
