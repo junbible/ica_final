@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr
 
 class UserResponse(BaseModel):
     """사용자 응답 스키마"""
-    id: str
+    id: int
     email: Optional[str] = None
     nickname: Optional[str] = None
     profile_image_url: Optional[str] = None
