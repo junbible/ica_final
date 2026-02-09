@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { LazyImage, getOptimizedImageUrl } from "@/components/ui/lazy-image"
 import { FavoriteButton } from "@/components/FavoriteButton"
 import { LoginDialog } from "@/components/auth/LoginDialog"
 import { getRestaurantById } from "@/data/restaurants"
@@ -115,11 +116,12 @@ export function RestaurantDetail() {
       </header>
 
       {/* 이미지 갤러리 */}
-      <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
-        <img
-          src={images[currentImageIndex]}
+      <div className="relative aspect-[4/3] overflow-hidden">
+        <LazyImage
+          src={getOptimizedImageUrl(images[currentImageIndex], 800)}
           alt={restaurant.name}
           className="w-full h-full object-cover"
+          wrapperClassName="w-full h-full"
         />
         {/* 이미지 인디케이터 */}
         {images.length > 1 && (
@@ -234,11 +236,12 @@ export function RestaurantDetail() {
                 <Card key={idx} className="p-3 border-0 shadow-sm">
                   <div className="flex gap-3">
                     {/* 썸네일 */}
-                    <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-gray-100">
-                      <img
-                        src={menu.image}
+                    <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0">
+                      <LazyImage
+                        src={getOptimizedImageUrl(menu.image, 200)}
                         alt={menu.name}
                         className="w-full h-full object-cover"
+                        wrapperClassName="w-full h-full"
                       />
                     </div>
                     {/* 정보 */}

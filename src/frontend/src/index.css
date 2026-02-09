@@ -99,3 +99,13 @@
     height: 100dvh;
   }
 }
+
+/* 이미지 로딩 shimmer 애니메이션 */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

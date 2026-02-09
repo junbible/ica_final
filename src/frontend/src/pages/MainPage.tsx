@@ -4,6 +4,7 @@ import { Search, MapPin, Star, MessageCircle, Navigation, ChevronRight, Trending
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { LazyImage, getOptimizedImageUrl } from "@/components/ui/lazy-image"
 import { useAuth } from "@/contexts/AuthContext"
 import { UserMenu } from "@/components/auth/UserMenu"
 import { LoginDialog } from "@/components/auth/LoginDialog"
@@ -327,17 +328,18 @@ function RestaurantCardHorizontal({ restaurant, onClick, isNew, onLoginRequired 
       onClick={onClick}
       className="w-[160px] shrink-0 overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
     >
-      <div className="relative w-full h-[120px] bg-gray-100">
-        <img
-          src={restaurant.image}
+      <div className="relative w-full h-[120px]">
+        <LazyImage
+          src={getOptimizedImageUrl(restaurant.image, 320)}
           alt={restaurant.name}
           className="w-full h-full object-cover"
+          wrapperClassName="w-full h-full"
         />
         {isNew && (
-          <span className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">NEW</span>
+          <span className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">NEW</span>
         )}
         {restaurant.isHot && !isNew && (
-          <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">HOT</span>
+          <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">HOT</span>
         )}
         <FavoriteButton
           restaurantId={String(restaurant.id)}
@@ -346,7 +348,7 @@ function RestaurantCardHorizontal({ restaurant, onClick, isNew, onLoginRequired 
           restaurantCategory={restaurant.category}
           restaurantRating={String(restaurant.rating)}
           onLoginRequired={onLoginRequired}
-          className="absolute top-2 right-2"
+          className="absolute top-2 right-2 z-10"
         />
       </div>
       <div className="p-2.5">
@@ -376,17 +378,18 @@ function RestaurantGrid({ restaurants, navigate, onLoginRequired }: {
           onClick={() => navigate(`/restaurant/${r.id}`)}
           className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
         >
-          <div className="relative w-full h-[120px] bg-gray-100">
-            <img
-              src={r.image}
+          <div className="relative w-full h-[120px]">
+            <LazyImage
+              src={getOptimizedImageUrl(r.image, 400)}
               alt={r.name}
               className="w-full h-full object-cover"
+              wrapperClassName="w-full h-full"
             />
             {r.isNew && (
-              <span className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">NEW</span>
+              <span className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">NEW</span>
             )}
             {r.isHot && (
-              <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded">HOT</span>
+              <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">HOT</span>
             )}
             <FavoriteButton
               restaurantId={String(r.id)}
@@ -395,7 +398,7 @@ function RestaurantGrid({ restaurants, navigate, onLoginRequired }: {
               restaurantCategory={r.category}
               restaurantRating={String(r.rating)}
               onLoginRequired={onLoginRequired}
-              className="absolute top-2 right-2"
+              className="absolute top-2 right-2 z-10"
             />
           </div>
           <div className="p-2.5">
