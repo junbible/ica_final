@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import {
   ArrowLeft,
@@ -28,40 +28,16 @@ declare global {
 
 function DetailMap({ lat, lng, name }: { lat: number; lng: number; name: string }) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
+  const [mapReady, setMapReady] = useState(false)
 
-  const initMap = useCallback(() => {
-    const container = mapRef.current
-    if (!container || !window.kakao?.maps?.LatLng) return
-    if (mapInstanceRef.current) return // 이미 초기화됨
-
-    // 컨테이너가 레이아웃된 후 초기화
-    setTimeout(() => {
-      const position = new window.kakao.maps.LatLng(lat, lng)
-      const map = new window.kakao.maps.Map(container, {
-        center: position,
-        level: 3,
-      })
-      mapInstanceRef.current = map
-
-      new window.kakao.maps.Marker({ map, position })
-
-      const overlay = new window.kakao.maps.CustomOverlay({
-        position,
-        content: `<div style="padding:4px 10px;background:white;border-radius:20px;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-8px)">${name}</div>`,
-        yAnchor: 2.2,
-      })
-      overlay.setMap(map)
-    }, 100)
-  }, [lat, lng, name])
-
+  // 1단계: SDK 로딩 대기
   useEffect(() => {
     if (window.kakao?.maps?.LatLng) {
-      initMap()
+      setMapReady(true)
       return
     }
     if (window.kakao?.maps?.load) {
-      window.kakao.maps.load(initMap)
+      window.kakao.maps.load(() => setMapReady(true))
       return
     }
     let attempts = 0
@@ -69,15 +45,41 @@ function DetailMap({ lat, lng, name }: { lat: number; lng: number; name: string 
       attempts++
       if (window.kakao?.maps?.load) {
         clearInterval(interval)
-        window.kakao.maps.load(initMap)
-      } else if (attempts >= 20) {
+        window.kakao.maps.load(() => setMapReady(true))
+      } else if (attempts >= 30) {
         clearInterval(interval)
       }
     }, 500)
     return () => clearInterval(interval)
-  }, [initMap])
+  }, [])
 
-  return <div ref={mapRef} className="w-full h-[180px] bg-gray-100" />
+  // 2단계: SDK 로드 완료 + 좌표 변경 시 지도 생성
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return
+
+    const container = mapRef.current
+    // 기존 지도 DOM 초기화
+    container.innerHTML = ""
+
+    const position = new window.kakao.maps.LatLng(lat, lng)
+    const map = new window.kakao.maps.Map(container, {
+      center: position,
+      level: 3,
+    })
+
+    new window.kakao.maps.Marker({ map, position })
+    new window.kakao.maps.CustomOverlay({
+      map,
+      position,
+      content: `<div style="padding:4px 10px;background:white;border-radius:20px;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-8px)">${name}</div>`,
+      yAnchor: 2.2,
+    })
+
+    // 컨테이너 리사이즈 후 센터 재조정
+    setTimeout(() => map.relayout(), 200)
+  }, [mapReady, lat, lng, name])
+
+  return <div ref={mapRef} className="w-full" style={{ height: "180px", minHeight: "180px" }} />
 }
 
 export function RestaurantDetail() {
