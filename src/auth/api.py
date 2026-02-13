@@ -151,8 +151,10 @@ async def kakao_callback(
 
     except Exception as e:
         logger.exception(f"Kakao callback error: {e}")
+        from urllib.parse import quote
+        detail = quote(str(e)[:200])
         return RedirectResponse(
-            url=f"{FRONTEND_URL}?auth_error=server_error",
+            url=f"{FRONTEND_URL}?auth_error=server_error&detail={detail}",
             status_code=302,
         )
 

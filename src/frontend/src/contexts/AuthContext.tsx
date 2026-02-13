@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams(window.location.search)
     const authSuccess = params.get("auth_success")
     const authError = params.get("auth_error")
+    const authDetail = params.get("detail")
 
     const initAuth = async () => {
       setIsLoading(true)
@@ -61,7 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           cancelled: "로그인이 취소되었습니다.",
           server_error: "서버 오류가 발생했습니다. 다시 시도해주세요.",
         }
-        showToast(errorMessages[authError] || "로그인 중 오류가 발생했습니다.", "error")
+        const msg = errorMessages[authError] || "로그인 중 오류가 발생했습니다."
+        showToast(authDetail ? `${msg} (${authDetail})` : msg, "error")
         setIsLoading(false)
         return
       }
