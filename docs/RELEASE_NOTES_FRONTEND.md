@@ -1,5 +1,103 @@
 # Release Notes
 
+## v1.4.0 (2026-02-14)
+
+### 🎉 주요 기능
+
+#### 카카오 Local API 실데이터 연동
+- **하드코딩 데이터 제거** — 기존 18개 가짜 맛집 데이터를 카카오 실시간 API로 전면 교체
+- **맛집 검색 API** — `GET /api/restaurants/search`, `/nearby`, `/region` 신규 엔드포인트
+- **통합 ID 체계** — 챗봇·메인 페이지·상세 페이지 모두 카카오 place_id 기반으로 통일
+- **Mock 폴백** — API 키 없이도 목업 데이터로 정상 동작
+
+#### 챗봇 직접 검색 기능
+- **음식+위치 한 줄 검색** — "강남역 짬뽕", "홍대 파스타" 등 바로 맛집 검색 가능
+- **기존 2단계 플로우 유지** — "피곤해요" → "강남" 컨디션 기반 검색도 동일하게 동작
+
+#### 맛집 상세 페이지 재설계
+- **카카오 실데이터 기반** — 주소, 전화번호, 카테고리, 좌표 모두 실제 데이터
+- **Kakao Maps SDK 직접 렌더링** — iframe 제거, SDK 기반 지도로 전환
+- **카카오 플레이스 리뷰** — 실제 사용자 리뷰·별점 표시 (비공식 API)
+- **영업시간 표시** — 오늘 영업 상태, 주간 영업시간 표시
+- **"카카오맵에서 보기" CTA** — place_url로 카카오맵 상세 페이지 연결
+
+---
+
+### 🔧 개선사항
+
+#### 채팅 UX 개선
+- **입력 자동 포커스** — 메시지 전송 후 / 봇 응답 후 커서 자동 복귀
+- **채팅 전용 Error Boundary** — 채팅 에러 시 전체 앱이 아닌 채팅 영역만 에러 표시 + "다시 시도" 버튼
+
+#### 카카오맵 SDK 안정화
+- **공유 SDK 로더** — `loadKakaoMaps()` 유틸리티로 중복 로딩 방지, 타임아웃 처리
+- **Service Worker 캐싱 제외** — 카카오 SDK 스크립트를 SW 캐시에서 제외
+- **맵 DOM 분리** — 카카오 SDK 컨테이너와 React 관리 노드를 완전 분리
+
+#### 백엔드 안전성 강화
+- **공유 카카오 클라이언트** — `restaurant/kakao_client.py`로 중복 코드 통합
+- **OpenAI null 응답 처리** — `content: null` 반환 시에도 안전 처리
+- **검색 에러 격리** — 맛집 검색 실패해도 챗봇 응답은 정상 반환
+
+---
+
+### 🐛 버그 수정
+
+| 이슈 | 원인 | 수정 |
+|------|------|------|
+| 채팅에서 맛집 클릭 → 빈 화면 | navigate()와 모달 닫기 타이밍 충돌 | navigate 먼저 실행 후 setTimeout으로 모달 닫기 |
+| `removeChild` 크래시 | 카카오 SDK가 React 관리 DOM 노드 삭제 | CSS display로 전환, 조건부 렌더링 제거 |
+| 채팅 에러 → 전체 화면 에러 | Error Boundary가 전체 앱 래핑 | ChatErrorBoundary로 채팅 영역만 격리 |
+| 입력 커서 사라짐 | 메시지 전송 후 focus 미처리 | useRef + auto-focus 추가 |
+| 삼계탕·족발 이미지 깨짐 | Unsplash URL 404 | 유효한 이미지 URL로 교체 |
+| 삼계탕 이모지 부적절 | 🍗(닭다리) 사용 | 🍲(국물) 으로 변경 |
+| 챗봇 시간 UTC 표시 | timezone 미지정 | KST(Asia/Seoul) 적용 |
+| 로그인 후 페이지 초기화 | redirect 시 원래 페이지 유실 | 로그인 전 페이지 보존 |
+| AuthProvider 크래시 | useNavigate를 Router 밖에서 호출 | Router 내부로 이동 |
+
+---
+
+### 📁 변경된 파일
+
+```
+src/
+├── restaurant/                    # 맛집 API 모듈 (신규)
+│   ├── __init__.py
+│   ├── kakao_client.py           # 카카오 API 공유 클라이언트
+│   ├── schemas.py                # KakaoRestaurant, SearchResponse
+│   └── api.py                    # /api/restaurants/* 엔드포인트
+├── chatbot/
+│   ├── api.py                    # 직접 검색, null 안전 처리
+│   ├── kakao_api.py              # 공유 클라이언트로 위임
+│   └── schemas.py                # full_category 추가
+├── main.py                       # restaurant_router 등록
+└── frontend/src/
+    ├── App.tsx                   # ChatErrorBoundary 추가
+    ├── lib/
+    │   ├── kakao-maps.ts         # SDK 로더 (신규)
+    │   └── restaurant-api.ts     # 맛집 API 클라이언트 (신규)
+    ├── data/
+    │   └── restaurants.ts        # 하드코딩 삭제, 상수만 유지
+    ├── components/chat/
+    │   ├── MapCard.tsx           # DOM 분리, CSS display
+    │   └── ChatInput.tsx         # auto-focus 추가
+    └── pages/
+        ├── MainPage.tsx          # API 연동
+        ├── RestaurantDetail.tsx  # 카카오 데이터 기반 재설계
+        └── MyPage.tsx            # 이미지 폴백
+```
+
+---
+
+### 📌 다음 버전 예정
+
+- [ ] 구글 로그인 연동
+- [ ] 최근 본 맛집 기록
+- [ ] 푸시 알림
+- [ ] Redis 기반 분산 Rate Limiting
+
+---
+
 ## v1.3.0 (2026-02-09)
 
 ### 🎉 주요 기능
