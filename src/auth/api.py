@@ -321,10 +321,13 @@ async def debug_cookies(request: Request):
     """브라우저가 보내는 쿠키 확인 (디버그용)"""
     access_token = request.cookies.get("access_token")
     refresh_token = request.cookies.get("refresh_token")
+    test_cookie = request.cookies.get("test_cookie")
 
     result = {
         "access_token_present": bool(access_token),
         "refresh_token_present": bool(refresh_token),
+        "test_cookie_present": bool(test_cookie),
+        "test_cookie_value": test_cookie,
         "all_cookies": list(request.cookies.keys()),
     }
 
@@ -339,3 +342,11 @@ async def debug_cookies(request: Request):
             }
 
     return result
+
+
+@router.get("/debug/set-test-cookie")
+async def set_test_cookie(response: Response):
+    """테스트 쿠키 설정 — 쿠키가 Railway에서 동작하는지 확인용"""
+    # 가장 기본적인 쿠키 (플래그 최소화)
+    response.set_cookie(key="test_cookie", value="hello_railway", path="/", max_age=600)
+    return {"message": "test_cookie set (basic, no flags)"}
