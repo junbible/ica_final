@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import { getCurrentUser, logout as apiLogout, refreshToken, type User } from "@/lib/auth"
+import { getCurrentUser, logout as apiLogout, refreshToken, exchangeAuthCode, type User } from "@/lib/auth"
 import { useToast } from "@/components/ui/toast"
 
 interface AuthContextType {
@@ -60,20 +60,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth()
   }, [])
 
-  // URL에서 auth_success 파라미터 확인 (OAuth 콜백 후)
+  // URL에서 auth_code/auth_error 파라미터 확인 (OAuth 콜백 후)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const authSuccess = params.get("auth_success")
+    const authCode = params.get("auth_code")
     const authError = params.get("auth_error")
 
-    if (authSuccess === "true") {
-      // 로그인 성공 - 사용자 정보 새로고침
-      refreshUser()
-      showToast("로그인되었습니다", "success")
-      // URL에서 파라미터 제거
+    if (authCode) {
+      // 인증 코드를 JWT 쿠키로 교환
       window.history.replaceState({}, "", window.location.pathname)
+      exchangeAuthCode(authCode).then((exchangedUser) => {
+        if (exchangedUser) {
+          setUser(exchangedUser as User)
+          showToast("로그인되었습니다", "success")
+          setIsLoading(false)
+        } else {
+          showToast("로그인에 실패했습니다. 다시 시도해주세요.", "error")
+          setIsLoading(false)
+        }
+      })
     } else if (authError) {
-      // 에러 메시지 변환
       const errorMessages: Record<string, string> = {
         token_failed: "로그인에 실패했습니다. 다시 시도해주세요.",
         user_info_failed: "사용자 정보를 가져올 수 없습니다.",
@@ -83,10 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const message = errorMessages[authError] || "로그인 중 오류가 발생했습니다."
       showToast(message, "error")
-      // URL에서 파라미터 제거
       window.history.replaceState({}, "", window.location.pathname)
     }
-  }, [refreshUser, showToast])
+  }, [showToast])
 
   return (
     <AuthContext.Provider

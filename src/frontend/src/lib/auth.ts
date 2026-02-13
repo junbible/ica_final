@@ -62,3 +62,25 @@ export async function logout(): Promise<void> {
 export function getKakaoLoginUrl(): string {
   return `${API_URL}/auth/kakao/login`
 }
+
+/**
+ * 일회용 인증 코드를 JWT 쿠키로 교환
+ */
+export async function exchangeAuthCode(code: string): Promise<User | null> {
+  try {
+    const response = await fetch(`${API_URL}/auth/exchange`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      return data.user
+    }
+    return null
+  } catch {
+    return null
+  }
+}

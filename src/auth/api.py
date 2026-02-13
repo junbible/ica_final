@@ -30,6 +30,9 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 # OAuth state 저장 (실제 프로덕션에서는 Redis 사용 권장)
 oauth_states: dict[str, str] = {}
 
+# 일회용 인증 코드 → user_id 매핑 (콜백 후 프론트엔드에서 쿠키 교환용)
+auth_codes: dict[str, int] = {}
+
 
 def get_or_create_user(db: Session, user_info: OAuthUserInfo) -> User:
     """사용자 조회 또는 생성"""
@@ -152,18 +155,55 @@ async def kakao_callback(
     logger.info(f"Creating/updating user: {user_info.nickname}")
     user = get_or_create_user(db, user_info)
 
-    # HTML 응답으로 쿠키 설정 후 JavaScript로 리다이렉트
-    # (RedirectResponse의 Set-Cookie가 프록시에서 유실되는 문제 방지)
-    logger.info(f"Login success, redirecting to {FRONTEND_URL}")
-    redirect_url = f"{FRONTEND_URL}?auth_success=true"
-    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
-    <script>window.location.replace("{redirect_url}");</script>
-    </body></html>"""
-    response = HTMLResponse(content=html)
+    # 일회용 인증 코드 생성 → 프론트엔드에서 fetch()로 쿠키 교환
+    auth_code = secrets.token_urlsafe(32)
+    auth_codes[auth_code] = user.id
+    logger.info(f"Login success, generated auth_code for user {user.id}")
+
+    return RedirectResponse(
+        url=f"{FRONTEND_URL}?auth_code={auth_code}",
+        status_code=302,
+    )
+
+
+
+# ==================== 인증 코드 교환 ====================
+
+@router.post("/exchange")
+async def exchange_auth_code(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """일회용 인증 코드를 JWT 토큰(쿠키)으로 교환"""
+    body = await request.json()
+    code = body.get("code")
+
+    if not code or code not in auth_codes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않은 인증 코드입니다",
+        )
+
+    user_id = auth_codes.pop(code)
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다",
+        )
+
     create_auth_response(response, user, db)
+    logger.info(f"Auth code exchanged for user {user.id}, cookies set")
 
-    return response
-
+    return {"message": "로그인 성공", "user": {
+        "id": user.id,
+        "nickname": user.nickname,
+        "email": user.email,
+        "profile_image_url": user.profile_image_url,
+        "provider": user.provider,
+    }}
 
 
 # ==================== 토큰 관리 ====================
