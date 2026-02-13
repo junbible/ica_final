@@ -26,7 +26,7 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
   const navigate = useNavigate()
   const mapRef = useRef<HTMLDivElement>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [mapError, setMapError] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!restaurants.length || !mapRef.current) return
@@ -74,8 +74,8 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
         setTimeout(() => map.relayout(), 200)
         setMapLoaded(true)
       })
-      .catch(() => {
-        if (!cancelled) setMapError(true)
+      .catch((e: any) => {
+        if (!cancelled) setMapError(e?.message || "지도 로딩 실패")
       })
 
     return () => { cancelled = true }
@@ -92,13 +92,13 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
         style={{ height: "200px", minHeight: "200px" }}
       >
         {!mapLoaded && !mapError && (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
+          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
             지도 로딩 중...
           </div>
         )}
         {mapError && (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
-            지도를 불러올 수 없습니다
+          <div className="w-full h-full flex items-center justify-center text-red-400 text-xs px-4 text-center">
+            {mapError}
           </div>
         )}
       </div>
