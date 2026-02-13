@@ -175,7 +175,7 @@ export function ChatContainer({ onClose }: ChatContainerProps = {}) {
                 {/* 맛집 지도 카드 */}
                 {message.restaurants && message.restaurants.length > 0 && (
                   <div className="ml-8 sm:ml-10 mt-2 mr-2">
-                    <MapCard restaurants={message.restaurants} />
+                    <MapCard restaurants={message.restaurants} onNavigate={onClose} />
                   </div>
                 )}
               </div>

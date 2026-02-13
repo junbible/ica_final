@@ -18,6 +18,7 @@ export interface Restaurant {
 
 interface MapCardProps {
   restaurants: Restaurant[]
+  onNavigate?: () => void
 }
 
 declare global {
@@ -63,7 +64,7 @@ function initMap(
   })
 }
 
-export function MapCard({ restaurants }: MapCardProps) {
+export function MapCard({ restaurants, onNavigate }: MapCardProps) {
   const navigate = useNavigate()
   const mapRef = useRef<HTMLDivElement>(null)
   const [selectedRestaurant] = useState<Restaurant | null>(null)
@@ -145,7 +146,7 @@ export function MapCard({ restaurants }: MapCardProps) {
             className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors hover:bg-primary/5 ${
               selectedRestaurant?.id === restaurant.id ? "bg-primary/10" : ""
             }`}
-            onClick={() => navigate(`/restaurant/${restaurant.id}?name=${encodeURIComponent(restaurant.name)}`, { state: { restaurant } })}
+            onClick={() => { onNavigate?.(); navigate(`/restaurant/${restaurant.id}?name=${encodeURIComponent(restaurant.name)}`, { state: { restaurant } }) }}
           >
             <div className="flex items-start gap-3">
               {/* 번호 */}
@@ -177,6 +178,7 @@ export function MapCard({ restaurants }: MapCardProps) {
                     className="h-7 text-xs px-2 bg-primary hover:bg-primary/90"
                     onClick={(e) => {
                       e.stopPropagation()
+                      onNavigate?.()
                       navigate(`/restaurant/${restaurant.id}?name=${encodeURIComponent(restaurant.name)}`, { state: { restaurant } })
                     }}
                   >
