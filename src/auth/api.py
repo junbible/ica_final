@@ -49,7 +49,6 @@ def get_or_create_user(db: Session, user_info: OAuthUserInfo) -> User:
         user.nickname = user_info.nickname or user.nickname
         user.profile_image_url = user_info.profile_image_url or user.profile_image_url
         user.email = user_info.email or user.email
-        user.last_login_at = datetime.utcnow()
         db.commit()
         db.refresh(user)
     else:
@@ -60,7 +59,6 @@ def get_or_create_user(db: Session, user_info: OAuthUserInfo) -> User:
             profile_image_url=user_info.profile_image_url,
             provider=user_info.provider,
             provider_id=user_info.provider_id,
-            last_login_at=datetime.utcnow(),
         )
         db.add(user)
         db.commit()

@@ -29,7 +29,6 @@ class User(Base):
     # 메타데이터
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_login_at = Column(DateTime, nullable=True)
 
     # 관계
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
