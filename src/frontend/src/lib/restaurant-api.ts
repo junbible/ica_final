@@ -80,6 +80,30 @@ export async function getRegionInfo(lat: number, lng: number): Promise<RegionInf
   return res.json()
 }
 
+export interface Review {
+  username: string
+  point: number
+  date: string
+  contents: string
+  photos: string[]
+}
+
+export interface ReviewResponse {
+  reviews: Review[]
+  total_count: number
+  avg_score: number
+}
+
+export async function getRestaurantReviews(placeId: string): Promise<ReviewResponse> {
+  try {
+    const res = await fetch(`${API_BASE}/api/restaurants/${placeId}/reviews`)
+    if (!res.ok) return { reviews: [], total_count: 0, avg_score: 0 }
+    return res.json()
+  } catch {
+    return { reviews: [], total_count: 0, avg_score: 0 }
+  }
+}
+
 export async function getRestaurantDetail(
   placeId: string,
   name?: string,

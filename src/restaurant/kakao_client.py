@@ -276,6 +276,80 @@ async def coord2region(lat: float, lng: float) -> dict | None:
     return _mock_region(lat, lng)
 
 
+def _mask_name(name: str) -> str:
+    """이름 가운데 글자를 *로 마스킹 (예: 김철수 → 김*수, 홍길동 → 홍*동)"""
+    if not name:
+        return "익명"
+    if len(name) <= 1:
+        return name
+    if len(name) == 2:
+        return name[0] + "*"
+    # 가운데 글자들을 *로
+    return name[0] + "*" * (len(name) - 2) + name[-1]
+
+
+async def fetch_place_reviews(place_id: str) -> dict:
+    """카카오 플레이스에서 리뷰 데이터 가져오기
+
+    Returns:
+        {"reviews": [...], "total_count": int, "avg_score": float}
+    """
+    if place_id.startswith("mock_"):
+        return {"reviews": [], "total_count": 0, "avg_score": 0}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://place.map.kakao.com/main/v/{place_id}",
+                headers={
+                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15",
+                    "Referer": f"https://place.map.kakao.com/m/{place_id}",
+                },
+                timeout=5.0,
+                follow_redirects=True,
+            )
+            if resp.status_code != 200:
+                return {"reviews": [], "total_count": 0, "avg_score": 0}
+
+            data = resp.json()
+
+            # comment 섹션에서 리뷰 추출
+            comment = data.get("comment") or {}
+            comment_list = comment.get("list") or []
+            score_cnt = comment.get("scorecnt", 0)
+            score_sum = comment.get("scoresum", 0)
+            avg_score = round(score_sum / score_cnt, 1) if score_cnt > 0 else 0
+
+            reviews = []
+            for item in comment_list:
+                # 사진 URL 추출
+                photos = []
+                for photo in (item.get("photoList") or []):
+                    url = photo.get("url") or photo.get("photoUrl") or ""
+                    if url:
+                        if url.startswith("//"):
+                            url = "https:" + url
+                        photos.append(url)
+
+                reviews.append({
+                    "username": _mask_name(item.get("username", "익명")),
+                    "point": item.get("point", 0),
+                    "date": item.get("date", ""),
+                    "contents": item.get("contents", ""),
+                    "photos": photos,
+                })
+
+            return {
+                "reviews": reviews,
+                "total_count": score_cnt or len(reviews),
+                "avg_score": avg_score,
+            }
+
+    except Exception as e:
+        print(f"Kakao place reviews error: {e}")
+        return {"reviews": [], "total_count": 0, "avg_score": 0}
+
+
 # og:image 캐시 (place_id -> image_url)
 _image_cache: dict[str, str] = {}
 

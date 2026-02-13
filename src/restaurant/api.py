@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter, Request
 from chatbot.rate_limit import limiter, RateLimits
-from .schemas import KakaoRestaurant, SearchResponse, RegionInfo
-from .kakao_client import search_keyword, search_nearby, coord2region, fetch_place_image, fetch_place_images
+from .schemas import KakaoRestaurant, SearchResponse, RegionInfo, ReviewResponse
+from .kakao_client import search_keyword, search_nearby, coord2region, fetch_place_image, fetch_place_images, fetch_place_reviews
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
@@ -78,6 +78,17 @@ async def api_region(
             display_name="알 수 없는 지역",
         )
     return RegionInfo(**result)
+
+
+@router.get("/{place_id}/reviews", response_model=ReviewResponse)
+@limiter.limit(RateLimits.GENERAL)
+async def api_reviews(
+    request: Request,
+    place_id: str,
+):
+    """맛집 리뷰 조회"""
+    result = await fetch_place_reviews(place_id)
+    return ReviewResponse(**result)
 
 
 @router.get("/{place_id}", response_model=KakaoRestaurant | None)

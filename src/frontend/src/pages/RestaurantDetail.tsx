@@ -15,7 +15,7 @@ import { LazyImage, getOptimizedImageUrl } from "@/components/ui/lazy-image"
 import { FavoriteButton } from "@/components/FavoriteButton"
 import { LoginDialog } from "@/components/auth/LoginDialog"
 import { getCategoryImage } from "@/data/restaurants"
-import { getRestaurantDetail, searchRestaurants, type KakaoRestaurant } from "@/lib/restaurant-api"
+import { getRestaurantDetail, searchRestaurants, getRestaurantReviews, type KakaoRestaurant, type Review } from "@/lib/restaurant-api"
 import { useToast } from "@/components/ui/toast"
 
 declare global {
@@ -88,6 +88,10 @@ export function RestaurantDetail() {
   const [error, setError] = useState<string | null>(null)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [activeTab, setActiveTab] = useState<"info" | "place">("info")
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [avgScore, setAvgScore] = useState(0)
+  const [totalReviewCount, setTotalReviewCount] = useState(0)
 
   useEffect(() => {
     // state로 이미 데이터가 있으면 API 호출 불필요
@@ -132,6 +136,29 @@ export function RestaurantDetail() {
     fetchDetail()
     return () => { cancelled = true }
   }, [id, stateRestaurant])
+
+  // 리뷰 탭 선택 시 리뷰 로드
+  useEffect(() => {
+    if (activeTab !== "place") return
+    if (!restaurant?.id || reviews.length > 0) return
+
+    let cancelled = false
+    setReviewsLoading(true)
+
+    async function loadReviews() {
+      const placeId = restaurant!.place_url?.match(/\/(\d+)$/)?.[1] || restaurant!.id
+      const data = await getRestaurantReviews(placeId)
+      if (!cancelled) {
+        setReviews(data.reviews)
+        setAvgScore(data.avg_score)
+        setTotalReviewCount(data.total_count)
+        setReviewsLoading(false)
+      }
+    }
+
+    loadReviews()
+    return () => { cancelled = true }
+  }, [activeTab, restaurant, reviews.length])
 
   const handleCall = () => {
     if (restaurant?.phone) {
@@ -215,8 +242,7 @@ export function RestaurantDetail() {
 
   const categoryImage = restaurant.image_url || getCategoryImage(restaurant.full_category || restaurant.category)
 
-  // place_url에서 place_id 추출 (place.map.kakao.com/{id} 형태)
-  const kakaoPlaceId = restaurant.place_url?.match(/\/(\d+)$/)?.[1] || restaurant.id
+
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -364,19 +390,89 @@ export function RestaurantDetail() {
           </Card>
         </div>
       ) : (
-        <div className="bg-secondary/30">
-          {/* 카카오 플레이스 임베드 */}
-          <div className="bg-white">
-            <iframe
-              src={`https://place.map.kakao.com/m/${kakaoPlaceId}`}
-              className="w-full border-0"
-              style={{ height: "calc(100vh - 220px)", minHeight: "500px" }}
-              title="카카오 플레이스"
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            />
-          </div>
-          {/* 새 창으로 열기 */}
-          <div className="p-3 flex justify-center">
+        <div className="bg-secondary/30 p-4 space-y-3">
+          {/* 평균 별점 */}
+          {avgScore > 0 && (
+            <Card className="p-4 border-0 shadow-sm text-center">
+              <div className="flex items-center justify-center gap-1 mb-1">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star
+                    key={s}
+                    className={`w-5 h-5 ${s <= Math.round(avgScore) ? "text-amber-400 fill-amber-400" : "text-gray-200"}`}
+                  />
+                ))}
+              </div>
+              <p className="text-lg font-bold">{avgScore}</p>
+              <p className="text-xs text-muted-foreground">리뷰 {totalReviewCount}개</p>
+            </Card>
+          )}
+
+          {/* 로딩 */}
+          {reviewsLoading && (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="p-4 border-0 shadow-sm animate-pulse">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-16 h-3 bg-gray-200 rounded" />
+                    <div className="w-12 h-3 bg-gray-200 rounded" />
+                  </div>
+                  <div className="h-4 bg-gray-200 rounded w-full mb-1" />
+                  <div className="h-4 bg-gray-200 rounded w-2/3" />
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* 리뷰 리스트 */}
+          {!reviewsLoading && reviews.length > 0 && reviews.map((review, idx) => (
+            <Card key={idx} className="p-4 border-0 shadow-sm">
+              {/* 헤더: 이름, 별점, 날짜 */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{review.username}</span>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        className={`w-3 h-3 ${s <= review.point ? "text-amber-400 fill-amber-400" : "text-gray-200"}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground">{review.date}</span>
+              </div>
+
+              {/* 리뷰 내용 */}
+              {review.contents && (
+                <p className="text-sm text-foreground leading-relaxed">{review.contents}</p>
+              )}
+
+              {/* 사진 */}
+              {review.photos.length > 0 && (
+                <div className="flex gap-2 mt-3 overflow-x-auto">
+                  {review.photos.map((photo, pIdx) => (
+                    <img
+                      key={pIdx}
+                      src={photo}
+                      alt={`리뷰 사진 ${pIdx + 1}`}
+                      className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                      loading="lazy"
+                    />
+                  ))}
+                </div>
+              )}
+            </Card>
+          ))}
+
+          {/* 리뷰 없음 */}
+          {!reviewsLoading && reviews.length === 0 && (
+            <Card className="p-6 border-0 shadow-sm text-center">
+              <p className="text-sm text-muted-foreground">아직 리뷰가 없습니다</p>
+            </Card>
+          )}
+
+          {/* 카카오맵에서 더보기 */}
+          <div className="flex justify-center pt-1">
             <Button
               variant="outline"
               size="sm"
@@ -384,7 +480,7 @@ export function RestaurantDetail() {
               onClick={handleOpenKakaoMap}
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              카카오맵 앱에서 열기
+              카카오맵에서 더보기
             </Button>
           </div>
         </div>

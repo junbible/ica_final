@@ -25,6 +25,27 @@ class SearchResponse(BaseModel):
     is_end: bool
 
 
+class ReviewPhoto(BaseModel):
+    """리뷰 사진"""
+    url: str
+
+
+class Review(BaseModel):
+    """카카오 플레이스 리뷰"""
+    username: str          # 마스킹된 이름
+    point: int             # 별점 (1-5)
+    date: str              # 날짜
+    contents: str          # 리뷰 내용
+    photos: list[str] = [] # 사진 URL 리스트
+
+
+class ReviewResponse(BaseModel):
+    """리뷰 응답"""
+    reviews: list[Review]
+    total_count: int
+    avg_score: float
+
+
 class RegionInfo(BaseModel):
     """좌표 → 지역 정보"""
     region_1depth: str     # "서울특별시"
