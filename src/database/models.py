@@ -1,15 +1,10 @@
 """데이터베이스 모델"""
 
-import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, Text, BigInteger
 from sqlalchemy.orm import relationship
 
 from .connection import Base
-
-
-def generate_uuid():
-    return str(uuid.uuid4())
 
 
 class User(Base):
@@ -42,7 +37,7 @@ class RefreshToken(Base):
     """리프레시 토큰 모델"""
     __tablename__ = "refresh_tokens"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token_hash = Column(String(255), nullable=False)
     expires_at = Column(DateTime, nullable=False)
@@ -60,7 +55,7 @@ class Favorite(Base):
     """즐겨찾기 모델"""
     __tablename__ = "favorites"
 
-    id = Column(String(36), primary_key=True, default=generate_uuid)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     restaurant_id = Column(String(50), nullable=False, index=True)  # 맛집 ID
     restaurant_name = Column(String(200), nullable=False)  # 맛집 이름
