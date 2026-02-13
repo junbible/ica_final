@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/toast"
 
 function DetailMap({ lat, lng, name }: { lat: number; lng: number; name: string }) {
   const mapRef = useRef<HTMLDivElement>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!mapRef.current) return
@@ -30,33 +31,49 @@ function DetailMap({ lat, lng, name }: { lat: number; lng: number; name: string 
     const container = mapRef.current
     let cancelled = false
 
+    setError(null)
+
     loadKakaoMaps()
       .then(() => {
-        if (cancelled || !container) return
+        if (cancelled) return
 
-        container.innerHTML = ""
-        const kakao = window.kakao
+        try {
+          container.innerHTML = ""
+          const kakao = window.kakao
 
-        const position = new kakao.maps.LatLng(lat, lng)
-        const map = new kakao.maps.Map(container, {
-          center: position,
-          level: 3,
-        })
+          const position = new kakao.maps.LatLng(lat, lng)
+          const map = new kakao.maps.Map(container, {
+            center: position,
+            level: 3,
+          })
 
-        new kakao.maps.Marker({ map, position })
-        new kakao.maps.CustomOverlay({
-          map,
-          position,
-          content: `<div style="padding:4px 10px;background:white;border-radius:20px;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-8px)">${name}</div>`,
-          yAnchor: 2.2,
-        })
+          new kakao.maps.Marker({ map, position })
+          new kakao.maps.CustomOverlay({
+            map,
+            position,
+            content: `<div style="padding:4px 10px;background:white;border-radius:20px;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-8px)">${name}</div>`,
+            yAnchor: 2.2,
+          })
 
-        setTimeout(() => map.relayout(), 200)
+          setTimeout(() => map.relayout(), 200)
+        } catch (e: any) {
+          if (!cancelled) setError(`Map init: ${e?.message || e}`)
+        }
       })
-      .catch(() => {})
+      .catch((e: any) => {
+        if (!cancelled) setError(`SDK load: ${e?.message || e}`)
+      })
 
     return () => { cancelled = true }
   }, [lat, lng, name])
+
+  if (error) {
+    return (
+      <div className="w-full bg-gray-100 flex items-center justify-center text-xs text-red-500 p-2" style={{ height: "180px" }}>
+        {error}
+      </div>
+    )
+  }
 
   return <div ref={mapRef} className="w-full bg-gray-100" style={{ height: "180px", minHeight: "180px" }} />
 }
