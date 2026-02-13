@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import {
   ArrowLeft,
@@ -22,6 +22,7 @@ export function RestaurantDetail() {
   const navigate = useNavigate()
   const location = useLocation()
   const { showToast } = useToast()
+  const mapRef = useRef<HTMLDivElement>(null)
 
   // React Router state로 전달된 레스토랑 데이터 (즉시 로딩)
   const stateRestaurant = (location.state as { restaurant?: KakaoRestaurant })?.restaurant || null
@@ -74,6 +75,29 @@ export function RestaurantDetail() {
     fetchDetail()
     return () => { cancelled = true }
   }, [id, stateRestaurant])
+
+  // 카카오 지도 SDK 렌더링
+  useEffect(() => {
+    if (!restaurant || !mapRef.current) return
+    if (!window.kakao || !window.kakao.maps) return
+
+    window.kakao.maps.load(() => {
+      const position = new window.kakao.maps.LatLng(restaurant.lat, restaurant.lng)
+      const map = new window.kakao.maps.Map(mapRef.current, {
+        center: position,
+        level: 3,
+      })
+
+      // 마커
+      const marker = new window.kakao.maps.Marker({ map, position })
+
+      // 인포윈도우
+      const infowindow = new window.kakao.maps.InfoWindow({
+        content: `<div style="padding:4px 8px;font-size:12px;white-space:nowrap;">${restaurant.name}</div>`,
+      })
+      infowindow.open(map, marker)
+    })
+  }, [restaurant])
 
   const handleCall = () => {
     if (restaurant?.phone) {
@@ -240,13 +264,10 @@ export function RestaurantDetail() {
       <div className="bg-secondary/30 p-4 space-y-4">
         {/* 지도 */}
         <Card className="overflow-hidden border-0 shadow-sm">
-          <div className="aspect-video bg-gray-100 relative">
-            <iframe
-              src={`https://map.kakao.com/link/map/${restaurant.name},${restaurant.lat},${restaurant.lng}`}
-              className="w-full h-full border-0"
-              title="지도"
-            />
-          </div>
+          <div
+            ref={mapRef}
+            className="w-full h-[180px] bg-gray-100"
+          />
           {restaurant.address && (
             <div className="p-4">
               <div className="flex items-start gap-3">

@@ -84,28 +84,28 @@ export const COLLECTIONS = [
     title: "🍲 따끈한 국물이 생각날 때",
     subtitle: "몸도 마음도 녹이는 국물 맛집",
     color: "from-amber-500 to-orange-500",
-    searchQuery: "해장국 국밥 설렁탕",
+    searchQuery: "해장국",
   },
   {
     id: "date",
     title: "💕 분위기 좋은 데이트 코스",
     subtitle: "특별한 날을 위한 레스토랑",
     color: "from-pink-500 to-rose-500",
-    searchQuery: "분위기좋은 레스토랑 데이트",
+    searchQuery: "레스토랑",
   },
   {
     id: "solo",
     title: "🍜 혼밥하기 좋은 곳",
     subtitle: "혼자서도 편하게 즐길 수 있는",
     color: "from-blue-500 to-indigo-500",
-    searchQuery: "혼밥 1인 식사",
+    searchQuery: "혼밥",
   },
   {
     id: "spicy",
     title: "🌶️ 오늘은 매운 게 땡긴다",
     subtitle: "스트레스 날리는 매운맛",
     color: "from-red-500 to-pink-500",
-    searchQuery: "매운 마라탕 떡볶이",
+    searchQuery: "매운",
   },
 ]
 

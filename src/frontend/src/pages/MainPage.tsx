@@ -57,6 +57,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
   const [isLoadingNearby, setIsLoadingNearby] = useState(true)
   const [isLoadingHot, setIsLoadingHot] = useState(true)
+  const [isLoadingCollections, setIsLoadingCollections] = useState(true)
   const [isSearching, setIsSearching] = useState(false)
 
   useEffect(() => {
@@ -91,6 +92,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
     const coords = LOCATION_COORDS[location] || LOCATION_COORDS["강남"]
     const results: Record<string, KakaoRestaurant[]> = {}
 
+    setIsLoadingCollections(true)
     await Promise.all(
       COLLECTIONS.map(async (col) => {
         try {
@@ -110,6 +112,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
     )
 
     setCollectionData(results)
+    setIsLoadingCollections(false)
   }, [])
 
   // 위치 변경 시 데이터 로드
@@ -291,6 +294,8 @@ export function MainPage({ onOpenChat }: MainPageProps) {
         {/* 테마 컬렉션 */}
         {COLLECTIONS.map((collection) => {
           const restaurants = collectionData[collection.id] || []
+          // 로딩 완료 후 결과 없으면 섹션 숨김
+          if (!isLoadingCollections && restaurants.length === 0) return null
           return (
             <section key={collection.id} className="py-6">
               <div className="px-4 mb-3">
@@ -298,7 +303,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
                 <p className="text-sm text-muted-foreground">{collection.subtitle}</p>
               </div>
               <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
-                {restaurants.length === 0
+                {isLoadingCollections
                   ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
                   : restaurants.map((r) => (
                       <KakaoCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}?name=${encodeURIComponent(r.name)}`, { state: { restaurant: r } })} onLoginRequired={() => setShowLoginDialog(true)} />
