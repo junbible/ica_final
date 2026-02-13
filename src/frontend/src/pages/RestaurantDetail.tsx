@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useLocation } from "react-router-dom"
 import {
   ArrowLeft,
   Share2,
@@ -20,14 +20,20 @@ import { useToast } from "@/components/ui/toast"
 export function RestaurantDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { showToast } = useToast()
 
-  const [restaurant, setRestaurant] = useState<KakaoRestaurant | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // React Router state로 전달된 레스토랑 데이터 (즉시 로딩)
+  const stateRestaurant = (location.state as { restaurant?: KakaoRestaurant })?.restaurant || null
+
+  const [restaurant, setRestaurant] = useState<KakaoRestaurant | null>(stateRestaurant)
+  const [isLoading, setIsLoading] = useState(!stateRestaurant)
   const [error, setError] = useState<string | null>(null)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
 
   useEffect(() => {
+    // state로 이미 데이터가 있으면 API 호출 불필요
+    if (stateRestaurant) return
     if (!id) return
 
     let cancelled = false
@@ -36,7 +42,6 @@ export function RestaurantDetail() {
 
     async function fetchDetail() {
       try {
-        // 먼저 name 파라미터 없이 시도 (URL에 name이 있으면 사용)
         const params = new URLSearchParams(window.location.search)
         const name = params.get("name") || undefined
 
@@ -68,7 +73,7 @@ export function RestaurantDetail() {
 
     fetchDetail()
     return () => { cancelled = true }
-  }, [id])
+  }, [id, stateRestaurant])
 
   const handleCall = () => {
     if (restaurant?.phone) {

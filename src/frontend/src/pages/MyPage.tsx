@@ -74,7 +74,7 @@ export function MyPage() {
                   <div className="flex">
                     <div
                       className="w-24 h-24 shrink-0 cursor-pointer"
-                      onClick={() => navigate(`/restaurant/${fav.restaurant_id}`)}
+                      onClick={() => navigate(`/restaurant/${fav.restaurant_id}?name=${encodeURIComponent(fav.restaurant_name)}`)}
                     >
                       <LazyImage
                         src={getOptimizedImageUrl(
@@ -89,7 +89,7 @@ export function MyPage() {
                     <div className="flex-1 p-3 flex flex-col justify-between">
                       <div
                         className="cursor-pointer"
-                        onClick={() => navigate(`/restaurant/${fav.restaurant_id}`)}
+                        onClick={() => navigate(`/restaurant/${fav.restaurant_id}?name=${encodeURIComponent(fav.restaurant_name)}`)}
                       >
                         <h3 className="font-bold text-sm">{fav.restaurant_name}</h3>
                         <div className="flex items-center gap-2 mt-1">

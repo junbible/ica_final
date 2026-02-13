@@ -73,12 +73,18 @@ async def api_detail(
     request: Request,
     place_id: str,
     name: str | None = None,
+    lat: float | None = None,
+    lng: float | None = None,
 ):
     """단일 맛집 조회 (이름으로 검색 후 ID 매칭)"""
     if not name:
         return None
 
-    result = await search_keyword(name, size=5)
+    # 기본 좌표 (서울 중심) — 좌표 없이 검색하면 카카오 API가 실패할 수 있음
+    search_lat = lat or 37.5665
+    search_lng = lng or 126.9780
+
+    result = await search_keyword(name, lat=search_lat, lng=search_lng, radius=20000, size=5)
     for doc in result["documents"]:
         if doc["id"] == place_id:
             return KakaoRestaurant(**doc)

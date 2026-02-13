@@ -114,7 +114,7 @@ export function MapCard({ restaurants }: MapCardProps) {
             className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors hover:bg-primary/5 ${
               selectedRestaurant?.id === restaurant.id ? "bg-primary/10" : ""
             }`}
-            onClick={() => navigate(`/restaurant/${restaurant.id}`)}
+            onClick={() => navigate(`/restaurant/${restaurant.id}?name=${encodeURIComponent(restaurant.name)}`, { state: { restaurant } })}
           >
             <div className="flex items-start gap-3">
               {/* 번호 */}
@@ -146,7 +146,7 @@ export function MapCard({ restaurants }: MapCardProps) {
                     className="h-7 text-xs px-2 bg-primary hover:bg-primary/90"
                     onClick={(e) => {
                       e.stopPropagation()
-                      navigate(`/restaurant/${restaurant.id}`)
+                      navigate(`/restaurant/${restaurant.id}?name=${encodeURIComponent(restaurant.name)}`, { state: { restaurant } })
                     }}
                   >
                     <ChevronRight className="w-3 h-3 mr-1" />

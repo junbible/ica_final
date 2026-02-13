@@ -282,7 +282,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
           ) : (
             <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
               {hotRestaurants.map((r) => (
-                <KakaoCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onLoginRequired={() => setShowLoginDialog(true)} />
+                <KakaoCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}?name=${encodeURIComponent(r.name)}`, { state: { restaurant: r } })} onLoginRequired={() => setShowLoginDialog(true)} />
               ))}
             </div>
           )}
@@ -301,7 +301,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
                 {restaurants.length === 0
                   ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
                   : restaurants.map((r) => (
-                      <KakaoCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onLoginRequired={() => setShowLoginDialog(true)} />
+                      <KakaoCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}?name=${encodeURIComponent(r.name)}`, { state: { restaurant: r } })} onLoginRequired={() => setShowLoginDialog(true)} />
                     ))}
               </div>
             </section>
@@ -481,7 +481,7 @@ function KakaoRestaurantGrid({ restaurants, navigate, onLoginRequired }: {
         return (
           <Card
             key={r.id}
-            onClick={() => navigate(`/restaurant/${r.id}`)}
+            onClick={() => navigate(`/restaurant/${r.id}?name=${encodeURIComponent(r.name)}`, { state: { restaurant: r } })}
             className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
           >
             <div className="relative w-full h-[120px]">
