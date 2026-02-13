@@ -157,7 +157,7 @@ export function RestaurantDetail() {
     ? restaurant.full_category.split(" > ").filter(Boolean)
     : [restaurant.category]
 
-  const categoryImage = getCategoryImage(restaurant.full_category || restaurant.category)
+  const categoryImage = restaurant.image_url || getCategoryImage(restaurant.full_category || restaurant.category)
 
   // place_url에서 place_id 추출 (place.map.kakao.com/{id} 형태)
   const kakaoPlaceId = restaurant.place_url?.match(/\/(\d+)$/)?.[1] || restaurant.id

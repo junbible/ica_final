@@ -1,7 +1,9 @@
 """카카오 로컬 API 공유 클라이언트"""
 
 import os
+import re
 import random
+import asyncio
 import httpx
 
 KAKAO_KEYWORD_URL = "https://dapi.kakao.com/v2/local/search/keyword.json"
@@ -272,3 +274,50 @@ async def coord2region(lat: float, lng: float) -> dict | None:
             print(f"Kakao coord2region API error: {e}")
 
     return _mock_region(lat, lng)
+
+
+# og:image 캐시 (place_id -> image_url)
+_image_cache: dict[str, str] = {}
+
+
+async def fetch_place_image(place_id: str) -> str:
+    """카카오 플레이스 페이지에서 og:image 추출"""
+    if place_id in _image_cache:
+        return _image_cache[place_id]
+
+    if place_id.startswith("mock_"):
+        return ""
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://place.map.kakao.com/{place_id}",
+                headers={"User-Agent": "Mozilla/5.0"},
+                timeout=3.0,
+                follow_redirects=True,
+            )
+            if resp.status_code == 200:
+                match = re.search(r'og:image["\s]+content="([^"]+)"', resp.text)
+                if match:
+                    url = match.group(1)
+                    if url.startswith("//"):
+                        url = "https:" + url
+                    _image_cache[place_id] = url
+                    return url
+    except Exception:
+        pass
+
+    _image_cache[place_id] = ""
+    return ""
+
+
+async def fetch_place_images(place_ids: list[str]) -> dict[str, str]:
+    """여러 place_id의 og:image를 병렬로 추출"""
+    results = await asyncio.gather(
+        *[fetch_place_image(pid) for pid in place_ids],
+        return_exceptions=True,
+    )
+    return {
+        pid: (url if isinstance(url, str) else "")
+        for pid, url in zip(place_ids, results)
+    }

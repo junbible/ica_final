@@ -12,6 +12,7 @@ export interface KakaoRestaurant {
   address: string
   phone: string
   place_url: string
+  image_url: string
   lat: number
   lng: number
   distance: number

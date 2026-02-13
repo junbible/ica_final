@@ -431,7 +431,7 @@ function KakaoCardHorizontal({ restaurant, onClick, onLoginRequired }: {
   onClick: () => void
   onLoginRequired?: () => void
 }) {
-  const image = getCategoryImage(restaurant.full_category || restaurant.category)
+  const image = restaurant.image_url || getCategoryImage(restaurant.full_category || restaurant.category)
 
   return (
     <Card
@@ -482,7 +482,7 @@ function KakaoRestaurantGrid({ restaurants, navigate, onLoginRequired }: {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {restaurants.map((r) => {
-        const image = getCategoryImage(r.full_category || r.category)
+        const image = r.image_url || getCategoryImage(r.full_category || r.category)
         return (
           <Card
             key={r.id}

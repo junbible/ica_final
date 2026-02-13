@@ -12,6 +12,7 @@ class KakaoRestaurant(BaseModel):
     address: str
     phone: str
     place_url: str         # 카카오맵 상세 페이지 링크
+    image_url: str = ""    # 카카오 플레이스 대표 이미지
     lat: float
     lng: float
     distance: int

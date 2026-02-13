@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Request
 from chatbot.rate_limit import limiter, RateLimits
 from .schemas import KakaoRestaurant, SearchResponse, RegionInfo
-from .kakao_client import search_keyword, search_nearby, coord2region
+from .kakao_client import search_keyword, search_nearby, coord2region, fetch_place_image, fetch_place_images
 
 router = APIRouter(prefix="/api/restaurants", tags=["restaurants"])
 
@@ -21,7 +21,14 @@ async def api_search(
 ):
     """키워드로 맛집 검색"""
     result = await search_keyword(query, lat, lng, radius, page, size)
-    restaurants = [KakaoRestaurant(**doc) for doc in result["documents"]]
+    docs = result["documents"]
+
+    # 이미지 병렬 가져오기
+    images = await fetch_place_images([d["id"] for d in docs])
+    for doc in docs:
+        doc["image_url"] = images.get(doc["id"], "")
+
+    restaurants = [KakaoRestaurant(**doc) for doc in docs]
     return SearchResponse(
         restaurants=restaurants,
         total_count=result["meta"]["total_count"],
@@ -40,7 +47,13 @@ async def api_nearby(
 ):
     """주변 맛집 검색 (카테고리 기반)"""
     result = await search_nearby(lat, lng, radius, size=size)
-    restaurants = [KakaoRestaurant(**doc) for doc in result["documents"]]
+    docs = result["documents"]
+
+    images = await fetch_place_images([d["id"] for d in docs])
+    for doc in docs:
+        doc["image_url"] = images.get(doc["id"], "")
+
+    restaurants = [KakaoRestaurant(**doc) for doc in docs]
     return SearchResponse(
         restaurants=restaurants,
         total_count=result["meta"]["total_count"],
@@ -85,12 +98,18 @@ async def api_detail(
     search_lng = lng or 126.9780
 
     result = await search_keyword(name, lat=search_lat, lng=search_lng, radius=20000, size=5)
+
+    matched = None
     for doc in result["documents"]:
         if doc["id"] == place_id:
-            return KakaoRestaurant(**doc)
+            matched = doc
+            break
 
-    # ID 정확 매칭 실패 시 첫 번째 결과라도 반환
-    if result["documents"]:
-        return KakaoRestaurant(**result["documents"][0])
+    if not matched and result["documents"]:
+        matched = result["documents"][0]
+
+    if matched:
+        matched["image_url"] = await fetch_place_image(matched["id"])
+        return KakaoRestaurant(**matched)
 
     return None
