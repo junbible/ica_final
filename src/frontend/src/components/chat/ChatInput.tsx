@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react"
+import { useState, useRef, useEffect, type KeyboardEvent } from "react"
 import { Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,11 +11,21 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, disabled, placeholder = "메시지를 입력하세요..." }: ChatInputProps) {
   const [message, setMessage] = useState("")
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // disabled가 false로 바뀌면 (응답 완료 후) 자동 포커스
+  useEffect(() => {
+    if (!disabled) {
+      inputRef.current?.focus()
+    }
+  }, [disabled])
 
   const handleSend = () => {
     if (message.trim() && !disabled) {
       onSend(message.trim())
       setMessage("")
+      // 전송 후 즉시 포커스 유지
+      setTimeout(() => inputRef.current?.focus(), 0)
     }
   }
 
@@ -29,6 +39,7 @@ export function ChatInput({ onSend, disabled, placeholder = "메시지를 입력
   return (
     <div className="flex items-center gap-2 p-4 border-t border-border/50 bg-white">
       <Input
+        ref={inputRef}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}

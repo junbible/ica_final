@@ -7,7 +7,7 @@ import { useOnboarding } from "./hooks/useOnboarding"
 import { AuthProvider } from "./contexts/AuthContext"
 import { FavoritesProvider } from "./contexts/FavoritesContext"
 import { ToastProvider } from "./components/ui/toast"
-import { X } from "lucide-react"
+import { X, RotateCcw } from "lucide-react"
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null }
@@ -23,6 +23,32 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
             <p className="text-sm text-gray-500 mb-4">{this.state.error.message}</p>
             <button onClick={() => { this.setState({ error: null }); window.location.href = "/" }} className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm">홈으로 돌아가기</button>
           </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+/** 챗봇 전용 에러 바운더리 — 챗 영역만 에러 표시, 전체 앱 안 깨짐 */
+class ChatErrorBoundary extends Component<{ children: ReactNode; onClose?: () => void }, { error: Error | null }> {
+  state = { error: null as Error | null }
+  static getDerivedStateFromError(error: Error) { return { error } }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error("Chat Error:", error, info) }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-white rounded-xl p-6 text-center">
+          <p className="text-4xl mb-3">😵</p>
+          <h3 className="text-base font-bold mb-1">채팅에서 오류가 발생했어요</h3>
+          <p className="text-xs text-gray-500 mb-4">{this.state.error.message}</p>
+          <button
+            onClick={() => this.setState({ error: null })}
+            className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm hover:bg-amber-600 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            다시 시도
+          </button>
         </div>
       )
     }
@@ -58,7 +84,9 @@ function AppContent() {
                 <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-[#FBBF24]/10 rounded-full blur-2xl" />
               </div>
               <div className="relative z-10 w-full h-full sm:w-auto sm:h-auto">
-                <ChatContainer />
+                <ChatErrorBoundary>
+                  <ChatContainer />
+                </ChatErrorBoundary>
               </div>
             </div>
           }
@@ -84,7 +112,9 @@ function AppContent() {
               <X className="w-5 h-5" />
             </button>
 
-            <ChatContainer onClose={() => setIsChatOpen(false)} />
+            <ChatErrorBoundary onClose={() => setIsChatOpen(false)}>
+              <ChatContainer onClose={() => setIsChatOpen(false)} />
+            </ChatErrorBoundary>
           </div>
         </div>
       )}

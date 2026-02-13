@@ -383,23 +383,29 @@ async def get_response(message: str, session_id: str) -> tuple[str, list[dict] |
 
     if location and len(message.strip()) > len(location) + 1:
         # 위치 + 음식 키워드 직접 검색 (예: "강남역 짬뽕", "홍대 파스타")
-        coords = LOCATION_COORDS.get(location, LOCATION_COORDS["강남"])
-        result = await search_keyword(
-            query=message,
-            lat=coords["lat"],
-            lng=coords["lng"],
-            radius=2000,
-            size=5,
-        )
-        restaurants = result["documents"][:5]
-        restaurant_info = format_restaurant_response(location, restaurants)
-        session["waiting_for_location"] = False
+        try:
+            coords = LOCATION_COORDS.get(location, LOCATION_COORDS["강남"])
+            result = await search_keyword(
+                query=message,
+                lat=coords["lat"],
+                lng=coords["lng"],
+                radius=2000,
+                size=5,
+            )
+            restaurants = result["documents"][:5]
+            restaurant_info = format_restaurant_response(location, restaurants)
+            session["waiting_for_location"] = False
+        except Exception as e:
+            print(f"Direct search error: {e}")
     elif location and session.get("waiting_for_location"):
         # 위치만 입력 + 이전 컨디션 기반 검색 (예: "피곤해요" → "강남")
-        condition_key = session.get("condition_key", "fatigue_1")
-        restaurants = await search_by_condition(location, condition_key, size=5)
-        restaurant_info = format_restaurant_response(location, restaurants)
-        session["waiting_for_location"] = False
+        try:
+            condition_key = session.get("condition_key", "fatigue_1")
+            restaurants = await search_by_condition(location, condition_key, size=5)
+            restaurant_info = format_restaurant_response(location, restaurants)
+            session["waiting_for_location"] = False
+        except Exception as e:
+            print(f"Condition search error: {e}")
 
     # OpenAI 메시지 구성 (시간대별 프롬프트)
     messages = [{"role": "system", "content": get_system_prompt()}]
@@ -407,7 +413,7 @@ async def get_response(message: str, session_id: str) -> tuple[str, list[dict] |
     messages.append({"role": "user", "content": message})
 
     # OpenAI 응답 생성
-    ai_response = await get_openai_response(messages)
+    ai_response = await get_openai_response(messages) or ""
 
     # 맛집 정보 추가
     if restaurant_info:
