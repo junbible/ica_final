@@ -29,6 +29,10 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 # OAuth state 저장 (실제 프로덕션에서는 Redis 사용 권장)
 oauth_states: dict[str, str] = {}
+
+# 일회용 인증 코드 → user_id 매핑 (콜백 후 프론트엔드에서 쿠키 교환용)
+auth_codes: dict[str, int] = {}
+
 _last_error: str | None = None
 
 
@@ -142,25 +146,62 @@ async def kakao_callback(
         # 사용자 생성/조회
         user = get_or_create_user(db, user_info)
 
-        # 리다이렉트 응답에 쿠키 설정
-        response = RedirectResponse(
-            url=f"{FRONTEND_URL}?auth_success=true",
+        # 일회용 인증 코드 생성 → 프론트엔드에서 fetch()로 쿠키 교환
+        auth_code = secrets.token_urlsafe(32)
+        auth_codes[auth_code] = user.id
+
+        return RedirectResponse(
+            url=f"{FRONTEND_URL}?auth_code={auth_code}",
             status_code=302,
         )
-        create_auth_response(response, user, db)
-        return response
 
     except Exception as e:
         global _last_error
         import traceback
         _last_error = traceback.format_exc()
         logger.exception(f"Kakao callback error: {e}")
-        from urllib.parse import quote
-        detail = quote(str(e)[:200])
         return RedirectResponse(
-            url=f"{FRONTEND_URL}?auth_error=server_error&detail={detail}",
+            url=f"{FRONTEND_URL}?auth_error=server_error",
             status_code=302,
         )
+
+
+# ==================== 인증 코드 교환 ====================
+
+@router.post("/exchange")
+async def exchange_auth_code(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """일회용 인증 코드를 JWT 토큰(쿠키)으로 교환"""
+    body = await request.json()
+    code = body.get("code")
+
+    if not code or code not in auth_codes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="유효하지 않은 인증 코드입니다",
+        )
+
+    user_id = auth_codes.pop(code)
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다",
+        )
+
+    create_auth_response(response, user, db)
+
+    return {"message": "로그인 성공", "user": {
+        "id": user.id,
+        "nickname": user.nickname,
+        "email": user.email,
+        "profile_image_url": user.profile_image_url,
+        "provider": user.provider,
+    }}
 
 
 # ==================== 토큰 관리 ====================

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import { getCurrentUser, logout as apiLogout, refreshToken, type User } from "@/lib/auth"
+import { getCurrentUser, logout as apiLogout, refreshToken, exchangeAuthCode, type User } from "@/lib/auth"
 import { useToast } from "@/components/ui/toast"
 
 interface AuthContextType {
@@ -40,16 +40,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 초기 로드 시 사용자 정보 확인 + OAuth 콜백 처리
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const authSuccess = params.get("auth_success")
+    const authCode = params.get("auth_code")
     const authError = params.get("auth_error")
-    const authDetail = params.get("detail")
 
     const initAuth = async () => {
       setIsLoading(true)
 
       // URL 파라미터 정리
-      if (authSuccess || authError) {
+      if (authCode || authError) {
         window.history.replaceState({}, "", window.location.pathname)
+      }
+
+      // OAuth 콜백: 인증 코드를 JWT 쿠키로 교환
+      if (authCode) {
+        const exchangedUser = await exchangeAuthCode(authCode)
+        if (exchangedUser) {
+          setUser(exchangedUser as User)
+          showToast("로그인되었습니다", "success")
+        } else {
+          showToast("로그인에 실패했습니다. 다시 시도해주세요.", "error")
+        }
+        setIsLoading(false)
+        return
       }
 
       // OAuth 에러 처리
@@ -62,19 +74,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           cancelled: "로그인이 취소되었습니다.",
           server_error: "서버 오류가 발생했습니다. 다시 시도해주세요.",
         }
-        const msg = errorMessages[authError] || "로그인 중 오류가 발생했습니다."
-        showToast(authDetail ? `${msg} (${authDetail})` : msg, "error")
+        showToast(errorMessages[authError] || "로그인 중 오류가 발생했습니다.", "error")
         setIsLoading(false)
         return
       }
 
-      // 쿠키로 사용자 정보 확인 (auth_success 또는 일반 페이지 로드)
+      // 일반 페이지 로드: 기존 쿠키로 사용자 확인
       const currentUser = await getCurrentUser()
       if (currentUser) {
         setUser(currentUser)
-        if (authSuccess) {
-          showToast("로그인되었습니다", "success")
-        }
         setIsLoading(false)
         return
       }
@@ -84,12 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (refreshed) {
         const refreshedUser = await getCurrentUser()
         setUser(refreshedUser)
-        if (authSuccess && refreshedUser) {
-          showToast("로그인되었습니다", "success")
-        }
-      } else if (authSuccess) {
-        // 쿠키가 설정되지 않은 경우
-        showToast("로그인에 실패했습니다. 다시 시도해주세요.", "error")
       }
       setIsLoading(false)
     }
