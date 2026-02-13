@@ -94,24 +94,26 @@ export function RestaurantDetail() {
   const [totalReviewCount, setTotalReviewCount] = useState(0)
 
   useEffect(() => {
-    // state로 이미 데이터가 있으면 API 호출 불필요
-    if (stateRestaurant) return
     if (!id) return
 
     let cancelled = false
-    setIsLoading(true)
-    setError(null)
+
+    // stateRestaurant가 없을 때만 로딩 표시
+    if (!stateRestaurant) {
+      setIsLoading(true)
+      setError(null)
+    }
 
     async function fetchDetail() {
       try {
         const params = new URLSearchParams(window.location.search)
-        const name = params.get("name") || undefined
+        const name = params.get("name") || stateRestaurant?.name || undefined
 
         let data = await getRestaurantDetail(id!, name)
 
-        // 첫 시도 실패 시 ID를 쿼리로 검색 시도
-        if (!data && !name) {
-          const searchResult = await searchRestaurants(id!, undefined, undefined, undefined, undefined, 1)
+        // 첫 시도 실패 시 이름으로 검색 시도
+        if (!data && name) {
+          const searchResult = await searchRestaurants(name, undefined, undefined, undefined, undefined, 1)
           if (searchResult.restaurants.length > 0) {
             data = searchResult.restaurants[0]
           }
@@ -120,14 +122,16 @@ export function RestaurantDetail() {
         if (!cancelled) {
           if (data) {
             setRestaurant(data)
-          } else {
+          } else if (!stateRestaurant) {
             setError("맛집 정보를 불러올 수 없습니다")
           }
           setIsLoading(false)
         }
       } catch {
         if (!cancelled) {
-          setError("네트워크 오류가 발생했습니다")
+          if (!stateRestaurant) {
+            setError("네트워크 오류가 발생했습니다")
+          }
           setIsLoading(false)
         }
       }
