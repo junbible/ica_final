@@ -38,60 +38,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     showToast("로그아웃되었습니다", "info")
   }, [showToast])
 
-  // 초기 로드 시 사용자 정보 확인
-  useEffect(() => {
-    const initAuth = async () => {
-      setIsLoading(true)
-      try {
-        const currentUser = await getCurrentUser()
-        setUser(currentUser)
-      } catch {
-        // 토큰 갱신 시도
-        const refreshed = await refreshToken()
-        if (refreshed) {
-          const currentUser = await getCurrentUser()
-          setUser(currentUser)
-        }
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    initAuth()
-  }, [])
-
-  // URL에서 auth_code/auth_error 파라미터 확인 (OAuth 콜백 후)
+  // 초기 로드 시 사용자 정보 확인 + OAuth 콜백 처리
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const authCode = params.get("auth_code")
     const authError = params.get("auth_error")
 
-    if (authCode) {
-      // 인증 코드를 JWT 쿠키로 교환
-      window.history.replaceState({}, "", window.location.pathname)
-      exchangeAuthCode(authCode).then((exchangedUser) => {
+    const initAuth = async () => {
+      setIsLoading(true)
+
+      // OAuth 콜백: 인증 코드를 JWT 쿠키로 교환
+      if (authCode) {
+        window.history.replaceState({}, "", window.location.pathname)
+        const exchangedUser = await exchangeAuthCode(authCode)
         if (exchangedUser) {
           setUser(exchangedUser as User)
           showToast("로그인되었습니다", "success")
-          setIsLoading(false)
         } else {
           showToast("로그인에 실패했습니다. 다시 시도해주세요.", "error")
-          setIsLoading(false)
         }
-      })
-    } else if (authError) {
-      const errorMessages: Record<string, string> = {
-        token_failed: "로그인에 실패했습니다. 다시 시도해주세요.",
-        user_info_failed: "사용자 정보를 가져올 수 없습니다.",
-        invalid_state: "로그인 세션이 만료되었습니다. 다시 시도해주세요.",
-        missing_params: "로그인 정보가 누락되었습니다. 다시 시도해주세요.",
-        cancelled: "로그인이 취소되었습니다.",
+        setIsLoading(false)
+        return
       }
-      const message = errorMessages[authError] || "로그인 중 오류가 발생했습니다."
-      showToast(message, "error")
-      window.history.replaceState({}, "", window.location.pathname)
+
+      // OAuth 에러 처리
+      if (authError) {
+        const errorMessages: Record<string, string> = {
+          token_failed: "로그인에 실패했습니다. 다시 시도해주세요.",
+          user_info_failed: "사용자 정보를 가져올 수 없습니다.",
+          invalid_state: "로그인 세션이 만료되었습니다. 다시 시도해주세요.",
+          missing_params: "로그인 정보가 누락되었습니다. 다시 시도해주세요.",
+          cancelled: "로그인이 취소되었습니다.",
+        }
+        showToast(errorMessages[authError] || "로그인 중 오류가 발생했습니다.", "error")
+        window.history.replaceState({}, "", window.location.pathname)
+        setIsLoading(false)
+        return
+      }
+
+      // 일반 페이지 로드: 기존 쿠키로 사용자 확인
+      const currentUser = await getCurrentUser()
+      if (currentUser) {
+        setUser(currentUser)
+        setIsLoading(false)
+        return
+      }
+
+      // access_token 만료 시 refresh_token으로 갱신
+      const refreshed = await refreshToken()
+      if (refreshed) {
+        const refreshedUser = await getCurrentUser()
+        setUser(refreshedUser)
+      }
+      setIsLoading(false)
     }
-  }, [showToast])
+
+    initAuth()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <AuthContext.Provider
