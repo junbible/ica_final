@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import {
   ArrowLeft,
@@ -17,6 +17,62 @@ import { LoginDialog } from "@/components/auth/LoginDialog"
 import { getCategoryImage } from "@/data/restaurants"
 import { getRestaurantDetail, searchRestaurants, type KakaoRestaurant } from "@/lib/restaurant-api"
 import { useToast } from "@/components/ui/toast"
+
+declare global {
+  interface Window {
+    kakao: any
+  }
+}
+
+function DetailMap({ lat, lng, name }: { lat: number; lng: number; name: string }) {
+  const mapRef = useRef<HTMLDivElement>(null)
+
+  const initMap = useCallback(() => {
+    if (!mapRef.current || !window.kakao?.maps?.LatLng) return
+
+    const position = new window.kakao.maps.LatLng(lat, lng)
+    const map = new window.kakao.maps.Map(mapRef.current, {
+      center: position,
+      level: 3,
+    })
+
+    // 마커
+    new window.kakao.maps.Marker({ map, position })
+
+    // 이름 오버레이
+    const overlay = new window.kakao.maps.CustomOverlay({
+      position,
+      content: `<div style="padding:4px 10px;background:white;border-radius:20px;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-8px)">${name}</div>`,
+      yAnchor: 2.2,
+    })
+    overlay.setMap(map)
+  }, [lat, lng, name])
+
+  useEffect(() => {
+    if (window.kakao?.maps?.LatLng) {
+      initMap()
+      return
+    }
+    if (window.kakao?.maps?.load) {
+      window.kakao.maps.load(initMap)
+      return
+    }
+    // SDK 아직 로드 안 된 경우 폴링
+    let attempts = 0
+    const interval = setInterval(() => {
+      attempts++
+      if (window.kakao?.maps?.load) {
+        clearInterval(interval)
+        window.kakao.maps.load(initMap)
+      } else if (attempts >= 20) {
+        clearInterval(interval)
+      }
+    }, 500)
+    return () => clearInterval(interval)
+  }, [initMap])
+
+  return <div ref={mapRef} className="w-full h-[180px]" />
+}
 
 export function RestaurantDetail() {
   const { id } = useParams()
@@ -263,11 +319,7 @@ export function RestaurantDetail() {
         <div className="bg-secondary/30 p-4 space-y-3">
           {/* 지도 */}
           <Card className="overflow-hidden border-0 shadow-sm">
-            <iframe
-              src={`https://map.kakao.com/link/map/${encodeURIComponent(restaurant.name)},${restaurant.lat},${restaurant.lng}`}
-              className="w-full h-[160px] border-0"
-              title="지도"
-            />
+            <DetailMap lat={restaurant.lat} lng={restaurant.lng} name={restaurant.name} />
             {restaurant.address && (
               <div className="p-3">
                 <div className="flex items-start gap-3">
