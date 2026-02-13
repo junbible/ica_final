@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, Component, type ReactNode, type ErrorInfo } from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { MainPage, RestaurantDetail, MyPage } from "./pages"
 import { ChatContainer } from "./components/chat"
@@ -8,6 +8,27 @@ import { AuthProvider } from "./contexts/AuthContext"
 import { FavoritesProvider } from "./contexts/FavoritesContext"
 import { ToastProvider } from "./components/ui/toast"
 import { X } from "lucide-react"
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null }
+  static getDerivedStateFromError(error: Error) { return { error } }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error("React Error:", error, info) }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+          <div className="text-center max-w-md">
+            <p className="text-6xl mb-4">😵</p>
+            <h2 className="text-lg font-bold mb-2">앗, 문제가 발생했어요</h2>
+            <p className="text-sm text-gray-500 mb-4">{this.state.error.message}</p>
+            <button onClick={() => { this.setState({ error: null }); window.location.href = "/" }} className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm">홈으로 돌아가기</button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 function AppContent() {
   const [isChatOpen, setIsChatOpen] = useState(false)
@@ -73,15 +94,17 @@ function AppContent() {
 
 function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <FavoritesProvider>
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
-        </FavoritesProvider>
-      </AuthProvider>
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AuthProvider>
+          <FavoritesProvider>
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </FavoritesProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   )
 }
 

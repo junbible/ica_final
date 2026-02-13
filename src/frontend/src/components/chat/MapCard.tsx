@@ -25,6 +25,14 @@ interface MapCardProps {
 
 export function MapCard({ restaurants, onNavigate }: MapCardProps) {
   const navigate = useNavigate()
+
+  const goToRestaurant = (restaurant: Restaurant) => {
+    const url = `/restaurant/${restaurant.id}?name=${encodeURIComponent(restaurant.name)}`
+    // navigate 먼저 실행 후 모달 닫기 (타이밍 이슈 방지)
+    navigate(url, { state: { restaurant } })
+    // 약간의 지연 후 모달 닫기 — navigate가 완료된 후 실행
+    setTimeout(() => onNavigate?.(), 0)
+  }
   const mapRef = useRef<HTMLDivElement>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [mapError, setMapError] = useState<string | null>(null)
@@ -110,7 +118,7 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
           <div
             key={restaurant.id}
             className="p-3 border-b last:border-b-0 cursor-pointer transition-colors hover:bg-primary/5"
-            onClick={() => { onNavigate?.(); navigate(`/restaurant/${restaurant.id}?name=${encodeURIComponent(restaurant.name)}`, { state: { restaurant } }) }}
+            onClick={() => goToRestaurant(restaurant)}
           >
             <div className="flex items-start gap-3">
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FBBF24] to-[#F59E0B] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
@@ -140,8 +148,7 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
                     className="h-7 text-xs px-2 bg-primary hover:bg-primary/90"
                     onClick={(e) => {
                       e.stopPropagation()
-                      onNavigate?.()
-                      navigate(`/restaurant/${restaurant.id}?name=${encodeURIComponent(restaurant.name)}`, { state: { restaurant } })
+                      goToRestaurant(restaurant)
                     }}
                   >
                     <ChevronRight className="w-3 h-3 mr-1" />
