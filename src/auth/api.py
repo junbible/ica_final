@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -29,12 +29,6 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 # OAuth state 저장 (실제 프로덕션에서는 Redis 사용 권장)
 oauth_states: dict[str, str] = {}
-
-# 일회용 인증 코드 → user_id 매핑 (콜백 후 프론트엔드에서 쿠키 교환용)
-auth_codes: dict[str, int] = {}
-
-# 디버그: 마지막 콜백 에러 저장
-_last_callback_error: Optional[str] = None
 
 
 def get_or_create_user(db: Session, user_info: OAuthUserInfo) -> User:
@@ -88,7 +82,7 @@ def create_auth_response(response: Response, user: User, db: Session) -> None:
         value=access_token,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )
@@ -97,7 +91,7 @@ def create_auth_response(response: Response, user: User, db: Session) -> None:
         value=refresh_token,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="lax",
         max_age=7 * 24 * 60 * 60,  # 7일
         path="/",
     )
@@ -121,101 +115,46 @@ async def kakao_callback(
     db: Session = Depends(get_db),
 ):
     """카카오 OAuth 콜백 처리"""
-    logger.info(f"Kakao callback: code={bool(code)}, state={bool(state)}, error={error}")
-
     if error:
-        logger.warning(f"Kakao callback error from provider: {error}")
         return RedirectResponse(url=f"{FRONTEND_URL}?auth_error={error}")
 
     if not code or not state:
-        logger.warning("Kakao callback missing code or state")
         return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=missing_params")
 
     # State 검증
     if state not in oauth_states or oauth_states[state] != "kakao":
-        logger.warning(f"Invalid state. Received: {state}, stored states: {list(oauth_states.keys())}")
         return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=invalid_state")
 
     del oauth_states[state]
 
     try:
         # 액세스 토큰 획득
-        logger.info("Exchanging code for access token...")
         access_token = await KakaoOAuth.get_access_token(code)
         if not access_token:
-            logger.error("Failed to get Kakao access token")
             return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=token_failed")
 
         # 사용자 정보 조회
-        logger.info("Fetching user info from Kakao...")
         user_info = await KakaoOAuth.get_user_info(access_token)
         if not user_info:
-            logger.error("Failed to get Kakao user info")
             return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=user_info_failed")
 
         # 사용자 생성/조회
-        logger.info(f"Creating/updating user: {user_info.nickname}")
         user = get_or_create_user(db, user_info)
 
-        # 일회용 인증 코드 생성 → 프론트엔드에서 fetch()로 쿠키 교환
-        auth_code = secrets.token_urlsafe(32)
-        auth_codes[auth_code] = user.id
-        logger.info(f"Login success, generated auth_code for user {user.id}")
-
-        return RedirectResponse(
-            url=f"{FRONTEND_URL}?auth_code={auth_code}",
+        # 리다이렉트 응답에 쿠키 설정
+        response = RedirectResponse(
+            url=f"{FRONTEND_URL}?auth_success=true",
             status_code=302,
         )
+        create_auth_response(response, user, db)
+        return response
+
     except Exception as e:
-        global _last_callback_error
-        import traceback
-        _last_callback_error = traceback.format_exc()
-        logger.exception(f"Kakao callback unexpected error: {e}")
-        from urllib.parse import quote
+        logger.exception(f"Kakao callback error: {e}")
         return RedirectResponse(
-            url=f"{FRONTEND_URL}?auth_error=server_error&detail={quote(str(e)[:200])}",
+            url=f"{FRONTEND_URL}?auth_error=server_error",
             status_code=302,
         )
-
-
-
-# ==================== 인증 코드 교환 ====================
-
-@router.post("/exchange")
-async def exchange_auth_code(
-    request: Request,
-    response: Response,
-    db: Session = Depends(get_db),
-):
-    """일회용 인증 코드를 JWT 토큰(쿠키)으로 교환"""
-    body = await request.json()
-    code = body.get("code")
-
-    if not code or code not in auth_codes:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="유효하지 않은 인증 코드입니다",
-        )
-
-    user_id = auth_codes.pop(code)
-
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="사용자를 찾을 수 없습니다",
-        )
-
-    create_auth_response(response, user, db)
-    logger.info(f"Auth code exchanged for user {user.id}, cookies set")
-
-    return {"message": "로그인 성공", "user": {
-        "id": user.id,
-        "nickname": user.nickname,
-        "email": user.email,
-        "profile_image_url": user.profile_image_url,
-        "provider": user.provider,
-    }}
 
 
 # ==================== 토큰 관리 ====================
@@ -307,64 +246,3 @@ async def logout(
 async def get_me(user: User = Depends(get_current_user)):
     """현재 로그인한 사용자 정보"""
     return user
-
-
-@router.get("/debug/config")
-async def debug_config():
-    """OAuth 설정 확인 (디버그용, 시크릿 값은 노출하지 않음)"""
-    from .oauth import BASE_URL, KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET, KAKAO_REDIRECT_URI, FRONTEND_URL
-    import os
-    return {
-        "base_url": BASE_URL,
-        "redirect_uri": KAKAO_REDIRECT_URI,
-        "frontend_url": FRONTEND_URL,
-        "kakao_client_id_set": bool(KAKAO_CLIENT_ID),
-        "kakao_client_id_prefix": KAKAO_CLIENT_ID[:4] + "..." if KAKAO_CLIENT_ID else "",
-        "kakao_client_secret_set": bool(KAKAO_CLIENT_SECRET),
-        "jwt_secret_from_env": bool(os.getenv("JWT_SECRET_KEY")),
-        "railway_domain": os.getenv("RAILWAY_PUBLIC_DOMAIN", "not set"),
-        "pending_oauth_states": len(oauth_states),
-        "access_token_expire_minutes": ACCESS_TOKEN_EXPIRE_MINUTES,
-    }
-
-
-@router.get("/debug/cookies")
-async def debug_cookies(request: Request):
-    """브라우저가 보내는 쿠키 확인 (디버그용)"""
-    access_token = request.cookies.get("access_token")
-    refresh_token = request.cookies.get("refresh_token")
-    test_cookie = request.cookies.get("test_cookie")
-
-    result = {
-        "access_token_present": bool(access_token),
-        "refresh_token_present": bool(refresh_token),
-        "test_cookie_present": bool(test_cookie),
-        "test_cookie_value": test_cookie,
-        "all_cookies": list(request.cookies.keys()),
-    }
-
-    if access_token:
-        payload = decode_token(access_token)
-        result["access_token_valid"] = bool(payload)
-        if payload:
-            result["access_token_payload"] = {
-                "sub": payload.get("sub"),
-                "type": payload.get("type"),
-                "exp": payload.get("exp"),
-            }
-
-    return result
-
-
-@router.get("/debug/last-error")
-async def debug_last_error():
-    """마지막 콜백 에러 확인"""
-    return {"last_error": _last_callback_error}
-
-
-@router.get("/debug/set-test-cookie")
-async def set_test_cookie(response: Response):
-    """테스트 쿠키 설정 — 쿠키가 Railway에서 동작하는지 확인용"""
-    # 가장 기본적인 쿠키 (플래그 최소화)
-    response.set_cookie(key="test_cookie", value="hello_railway", path="/", max_age=600)
-    return {"message": "test_cookie set (basic, no flags)"}

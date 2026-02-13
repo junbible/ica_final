@@ -25,10 +25,6 @@ KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", f"{BASE_URL}/auth/kakao/cal
 # 프론트엔드 URL (OAuth 완료 후 리다이렉트)
 FRONTEND_URL = os.getenv("FRONTEND_URL", BASE_URL)
 
-logger.info(f"OAuth BASE_URL: {BASE_URL}")
-logger.info(f"OAuth REDIRECT_URI: {KAKAO_REDIRECT_URI}")
-logger.info(f"OAuth FRONTEND_URL: {FRONTEND_URL}")
-logger.info(f"OAuth KAKAO_CLIENT_ID set: {bool(KAKAO_CLIENT_ID)}")
 
 
 @dataclass
