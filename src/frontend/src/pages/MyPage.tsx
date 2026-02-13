@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card"
 import { LazyImage, getOptimizedImageUrl } from "@/components/ui/lazy-image"
 import { useAuth } from "@/contexts/AuthContext"
 import { useFavorites } from "@/contexts/FavoritesContext"
+import { getCategoryImage } from "@/data/restaurants"
 
 export function MyPage() {
   const navigate = useNavigate()
@@ -75,18 +76,15 @@ export function MyPage() {
                       className="w-24 h-24 shrink-0 cursor-pointer"
                       onClick={() => navigate(`/restaurant/${fav.restaurant_id}`)}
                     >
-                      {fav.restaurant_image ? (
-                        <LazyImage
-                          src={getOptimizedImageUrl(fav.restaurant_image, 200)}
-                          alt={fav.restaurant_name}
-                          className="w-full h-full object-cover"
-                          wrapperClassName="w-full h-full"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                          <span className="text-2xl">🍽️</span>
-                        </div>
-                      )}
+                      <LazyImage
+                        src={getOptimizedImageUrl(
+                          fav.restaurant_image || getCategoryImage(fav.restaurant_category || ""),
+                          200
+                        )}
+                        alt={fav.restaurant_name}
+                        className="w-full h-full object-cover"
+                        wrapperClassName="w-full h-full"
+                      />
                     </div>
                     <div className="flex-1 p-3 flex flex-col justify-between">
                       <div

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Search, MapPin, Star, MessageCircle, Navigation, ChevronRight, TrendingUp, Clock, Flame, User } from "lucide-react"
+import { Search, MapPin, MessageCircle, Navigation, ChevronRight, Flame, User } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -14,13 +14,16 @@ import {
   CATEGORIES,
   LOCATIONS,
   COLLECTIONS,
-  getRestaurantById,
-  getRestaurantsByLocation,
-  getHotRestaurants,
-  getNewRestaurants,
-  searchRestaurants,
-  type Restaurant,
+  LOCATION_COORDS,
+  CATEGORY_SEARCH_MAP,
+  getCategoryImage,
 } from "@/data/restaurants"
+import {
+  searchRestaurants,
+  getNearbyRestaurants,
+  getRegionInfo,
+  type KakaoRestaurant,
+} from "@/lib/restaurant-api"
 
 // 시간대 계산
 function getTimeContext() {
@@ -46,37 +49,130 @@ export function MainPage({ onOpenChat }: MainPageProps) {
   const [showLoginDialog, setShowLoginDialog] = useState(false)
   const timeContext = getTimeContext()
 
+  // API 데이터 상태
+  const [nearbyRestaurants, setNearbyRestaurants] = useState<KakaoRestaurant[]>([])
+  const [hotRestaurants, setHotRestaurants] = useState<KakaoRestaurant[]>([])
+  const [collectionData, setCollectionData] = useState<Record<string, KakaoRestaurant[]>>({})
+  const [searchResults, setSearchResults] = useState<KakaoRestaurant[]>([])
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null)
+  const [isLoadingNearby, setIsLoadingNearby] = useState(true)
+  const [isLoadingHot, setIsLoadingHot] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
+
   useEffect(() => {
     const timer = setTimeout(() => setShowTooltip(false), 4000)
     return () => clearTimeout(timer)
   }, [])
 
+  // 주변 맛집 + 핫한 맛집 로드
+  const loadRestaurants = useCallback(async (location: string) => {
+    const coords = LOCATION_COORDS[location] || LOCATION_COORDS["강남"]
+
+    setIsLoadingNearby(true)
+    setIsLoadingHot(true)
+
+    try {
+      const [nearbyRes, hotRes] = await Promise.all([
+        getNearbyRestaurants(coords.lat, coords.lng, 2000, 8),
+        searchRestaurants(`${location} 인기 맛집`, coords.lat, coords.lng, 3000, 1, 6),
+      ])
+      setNearbyRestaurants(nearbyRes.restaurants)
+      setHotRestaurants(hotRes.restaurants)
+    } catch (e) {
+      console.error("Failed to load restaurants:", e)
+    } finally {
+      setIsLoadingNearby(false)
+      setIsLoadingHot(false)
+    }
+  }, [])
+
+  // 컬렉션 데이터 로드
+  const loadCollections = useCallback(async (location: string) => {
+    const coords = LOCATION_COORDS[location] || LOCATION_COORDS["강남"]
+    const results: Record<string, KakaoRestaurant[]> = {}
+
+    await Promise.all(
+      COLLECTIONS.map(async (col) => {
+        try {
+          const res = await searchRestaurants(
+            `${location} ${col.searchQuery}`,
+            coords.lat,
+            coords.lng,
+            3000,
+            1,
+            5,
+          )
+          results[col.id] = res.restaurants
+        } catch {
+          results[col.id] = []
+        }
+      }),
+    )
+
+    setCollectionData(results)
+  }, [])
+
+  // 위치 변경 시 데이터 로드
+  useEffect(() => {
+    loadRestaurants(selectedLocation)
+    loadCollections(selectedLocation)
+  }, [selectedLocation, loadRestaurants, loadCollections])
+
   const getCurrentLocation = () => {
     setIsLocating(true)
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
+        async (position) => {
           const { latitude, longitude } = position.coords
-          if (latitude > 37.52 && longitude > 127.02) setSelectedLocation("강남")
-          else if (latitude > 37.55 && longitude < 126.93) setSelectedLocation("홍대")
-          else if (latitude > 37.55 && longitude < 126.95) setSelectedLocation("신촌")
-          else if (latitude > 37.53 && longitude < 126.99) setSelectedLocation("여의도")
-          else if (latitude > 37.54 && longitude > 127.04) setSelectedLocation("성수")
-          else setSelectedLocation("강남")
+          setUserCoords({ lat: latitude, lng: longitude })
+
+          try {
+            const region = await getRegionInfo(latitude, longitude)
+            // 지역명에서 LOCATIONS와 매칭
+            const matched = LOCATIONS.find(
+              (loc) =>
+                region.display_name.includes(loc) ||
+                region.region_2depth.includes(loc),
+            )
+            setSelectedLocation(matched || "강남")
+          } catch {
+            setSelectedLocation("강남")
+          }
           setIsLocating(false)
         },
-        () => { setSelectedLocation("강남"); setIsLocating(false) }
+        () => {
+          setSelectedLocation("강남")
+          setIsLocating(false)
+        },
       )
     }
   }
 
-  const nearbyRestaurants = getRestaurantsByLocation(selectedLocation)
-  const hotRestaurants = getHotRestaurants(6)
-  const newRestaurants = getNewRestaurants()
+  // 검색 실행
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      return
+    }
 
-  // 검색 결과
-  if (searchQuery) {
-    const filtered = searchRestaurants(searchQuery)
+    const timer = setTimeout(async () => {
+      setIsSearching(true)
+      try {
+        const coords = userCoords || LOCATION_COORDS[selectedLocation] || LOCATION_COORDS["강남"]
+        const res = await searchRestaurants(searchQuery, coords.lat, coords.lng, 5000, 1, 15)
+        setSearchResults(res.restaurants)
+      } catch {
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery, selectedLocation, userCoords])
+
+  // 검색 결과 모드
+  if (searchQuery.trim()) {
     return (
       <div className="min-h-screen bg-background pb-20">
         <SearchHeader
@@ -89,8 +185,15 @@ export function MainPage({ onOpenChat }: MainPageProps) {
           onLoginClick={() => setShowLoginDialog(true)}
         />
         <main className="max-w-5xl mx-auto px-4 py-4">
-          <h2 className="text-lg font-bold mb-4">'{searchQuery}' 검색 결과 ({filtered.length})</h2>
-          <RestaurantGrid restaurants={filtered} navigate={navigate} onLoginRequired={() => setShowLoginDialog(true)} />
+          <h2 className="text-lg font-bold mb-4">
+            '{searchQuery}' 검색 결과
+            {!isSearching && ` (${searchResults.length})`}
+          </h2>
+          {isSearching ? (
+            <SkeletonGrid count={4} />
+          ) : (
+            <KakaoRestaurantGrid restaurants={searchResults} navigate={navigate} onLoginRequired={() => setShowLoginDialog(true)} />
+          )}
         </main>
         <ChatFAB onOpenChat={onOpenChat} showTooltip={false} />
         <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
@@ -100,7 +203,6 @@ export function MainPage({ onOpenChat }: MainPageProps) {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* 로그인 다이얼로그 */}
       <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
 
       {/* 헤더 */}
@@ -173,28 +275,38 @@ export function MainPage({ onOpenChat }: MainPageProps) {
         {/* 지금 핫한 맛집 */}
         <section className="py-6">
           <SectionHeader title="지금 핫한 맛집" icon={<Flame className="w-5 h-5 text-red-500" />} />
-          <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
-            {hotRestaurants.map((r) => (
-              <RestaurantCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onLoginRequired={() => setShowLoginDialog(true)} />
-            ))}
-          </div>
+          {isLoadingHot ? (
+            <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+              {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+              {hotRestaurants.map((r) => (
+                <KakaoCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onLoginRequired={() => setShowLoginDialog(true)} />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* 테마 컬렉션 */}
-        {COLLECTIONS.map((collection) => (
-          <section key={collection.id} className="py-6">
-            <div className="px-4 mb-3">
-              <h3 className="font-bold text-base">{collection.title}</h3>
-              <p className="text-sm text-muted-foreground">{collection.subtitle}</p>
-            </div>
-            <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
-              {collection.restaurants.map((id) => {
-                const r = getRestaurantById(id)
-                return r ? <RestaurantCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onLoginRequired={() => setShowLoginDialog(true)} /> : null
-              })}
-            </div>
-          </section>
-        ))}
+        {COLLECTIONS.map((collection) => {
+          const restaurants = collectionData[collection.id] || []
+          return (
+            <section key={collection.id} className="py-6">
+              <div className="px-4 mb-3">
+                <h3 className="font-bold text-base">{collection.title}</h3>
+                <p className="text-sm text-muted-foreground">{collection.subtitle}</p>
+              </div>
+              <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
+                {restaurants.length === 0
+                  ? [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
+                  : restaurants.map((r) => (
+                      <KakaoCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} onLoginRequired={() => setShowLoginDialog(true)} />
+                    ))}
+              </div>
+            </section>
+          )
+        })}
 
         {/* 카테고리 */}
         <section className="py-6 bg-secondary/50">
@@ -203,7 +315,7 @@ export function MainPage({ onOpenChat }: MainPageProps) {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => navigate(`/category/${cat.id}`)}
+                onClick={() => setSearchQuery(CATEGORY_SEARCH_MAP[cat.id] || cat.label)}
                 className="bg-white rounded-xl p-3 text-center shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="w-14 h-14 mx-auto mb-2 rounded-full overflow-hidden bg-gray-100">
@@ -215,23 +327,15 @@ export function MainPage({ onOpenChat }: MainPageProps) {
           </div>
         </section>
 
-        {/* 신규 오픈 */}
-        {newRestaurants.length > 0 && (
-          <section className="py-6">
-            <SectionHeader title="신규 오픈" icon={<Clock className="w-5 h-5 text-blue-500" />} />
-            <div className="flex gap-3 overflow-x-auto px-4 pb-2 scrollbar-hide">
-              {newRestaurants.map((r) => (
-                <RestaurantCardHorizontal key={r.id} restaurant={r} onClick={() => navigate(`/restaurant/${r.id}`)} isNew onLoginRequired={() => setShowLoginDialog(true)} />
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* 내 주변 맛집 */}
         <section className="py-6">
-          <SectionHeader title={`${selectedLocation} 맛집`} icon={<TrendingUp className="w-5 h-5 text-primary" />} actionText="전체보기" />
+          <SectionHeader title={`${selectedLocation} 맛집`} icon={<MapPin className="w-5 h-5 text-primary" />} />
           <div className="px-4">
-            <RestaurantGrid restaurants={nearbyRestaurants} navigate={navigate} onLoginRequired={() => setShowLoginDialog(true)} />
+            {isLoadingNearby ? (
+              <SkeletonGrid count={4} />
+            ) : (
+              <KakaoRestaurantGrid restaurants={nearbyRestaurants} navigate={navigate} onLoginRequired={() => setShowLoginDialog(true)} />
+            )}
           </div>
         </section>
       </main>
@@ -316,13 +420,14 @@ function SectionHeader({ title, icon, actionText }: { title: string; icon?: Reac
   )
 }
 
-// 가로 스크롤 카드
-function RestaurantCardHorizontal({ restaurant, onClick, isNew, onLoginRequired }: {
-  restaurant: Restaurant
+// 카카오 맛집 가로 스크롤 카드
+function KakaoCardHorizontal({ restaurant, onClick, onLoginRequired }: {
+  restaurant: KakaoRestaurant
   onClick: () => void
-  isNew?: boolean
   onLoginRequired?: () => void
 }) {
+  const image = getCategoryImage(restaurant.full_category || restaurant.category)
+
   return (
     <Card
       onClick={onClick}
@@ -330,84 +435,108 @@ function RestaurantCardHorizontal({ restaurant, onClick, isNew, onLoginRequired 
     >
       <div className="relative w-full h-[120px]">
         <LazyImage
-          src={getOptimizedImageUrl(restaurant.image, 320)}
+          src={getOptimizedImageUrl(image, 320)}
           alt={restaurant.name}
           className="w-full h-full object-cover"
           wrapperClassName="w-full h-full"
         />
-        {isNew && (
-          <span className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">NEW</span>
-        )}
-        {restaurant.isHot && !isNew && (
-          <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">HOT</span>
-        )}
         <FavoriteButton
-          restaurantId={String(restaurant.id)}
+          restaurantId={restaurant.id}
           restaurantName={restaurant.name}
-          restaurantImage={restaurant.image}
+          restaurantImage={image}
           restaurantCategory={restaurant.category}
-          restaurantRating={String(restaurant.rating)}
           onLoginRequired={onLoginRequired}
           className="absolute top-2 right-2 z-10"
         />
       </div>
       <div className="p-2.5">
         <h4 className="font-bold text-sm truncate">{restaurant.name}</h4>
-        <div className="flex items-center gap-1 mt-1">
-          <Star className="w-3 h-3 fill-primary text-primary" />
-          <span className="text-sm font-medium">{restaurant.rating}</span>
-          <span className="text-xs text-muted-foreground">({restaurant.reviewCount.toLocaleString()})</span>
-        </div>
-        <p className="text-xs text-muted-foreground mt-1 truncate">{restaurant.category} · {restaurant.distance}</p>
+        <p className="text-xs text-muted-foreground mt-1 truncate">
+          {restaurant.category}
+          {restaurant.distance > 0 && ` · ${restaurant.distance}m`}
+        </p>
       </div>
     </Card>
   )
 }
 
-// 그리드 카드
-function RestaurantGrid({ restaurants, navigate, onLoginRequired }: {
-  restaurants: Restaurant[]
+// 카카오 맛집 그리드
+function KakaoRestaurantGrid({ restaurants, navigate, onLoginRequired }: {
+  restaurants: KakaoRestaurant[]
   navigate: ReturnType<typeof useNavigate>
   onLoginRequired?: () => void
 }) {
+  if (restaurants.length === 0) {
+    return (
+      <div className="text-center py-10 text-muted-foreground">
+        <p>이 지역에 맛집 정보가 없습니다</p>
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-      {restaurants.map((r) => (
-        <Card
-          key={r.id}
-          onClick={() => navigate(`/restaurant/${r.id}`)}
-          className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-        >
-          <div className="relative w-full h-[120px]">
-            <LazyImage
-              src={getOptimizedImageUrl(r.image, 400)}
-              alt={r.name}
-              className="w-full h-full object-cover"
-              wrapperClassName="w-full h-full"
-            />
-            {r.isNew && (
-              <span className="absolute top-2 left-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">NEW</span>
-            )}
-            {r.isHot && (
-              <span className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded z-10">HOT</span>
-            )}
-            <FavoriteButton
-              restaurantId={String(r.id)}
-              restaurantName={r.name}
-              restaurantImage={r.image}
-              restaurantCategory={r.category}
-              restaurantRating={String(r.rating)}
-              onLoginRequired={onLoginRequired}
-              className="absolute top-2 right-2 z-10"
-            />
-          </div>
-          <div className="p-2.5">
-            <h4 className="font-bold text-sm truncate">{r.name}</h4>
-            <div className="flex items-center gap-1 mt-1">
-              <Star className="w-3 h-3 fill-primary text-primary" />
-              <span className="text-sm">{r.rating}</span>
-              <span className="text-xs text-muted-foreground">· {r.distance}</span>
+      {restaurants.map((r) => {
+        const image = getCategoryImage(r.full_category || r.category)
+        return (
+          <Card
+            key={r.id}
+            onClick={() => navigate(`/restaurant/${r.id}`)}
+            className="overflow-hidden border-0 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+          >
+            <div className="relative w-full h-[120px]">
+              <LazyImage
+                src={getOptimizedImageUrl(image, 400)}
+                alt={r.name}
+                className="w-full h-full object-cover"
+                wrapperClassName="w-full h-full"
+              />
+              <FavoriteButton
+                restaurantId={r.id}
+                restaurantName={r.name}
+                restaurantImage={image}
+                restaurantCategory={r.category}
+                onLoginRequired={onLoginRequired}
+                className="absolute top-2 right-2 z-10"
+              />
             </div>
+            <div className="p-2.5">
+              <h4 className="font-bold text-sm truncate">{r.name}</h4>
+              <p className="text-xs text-muted-foreground mt-1">
+                {r.category}
+                {r.distance > 0 && ` · ${r.distance}m`}
+              </p>
+            </div>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
+// 스켈레톤 카드
+function SkeletonCard() {
+  return (
+    <Card className="w-[160px] shrink-0 overflow-hidden border-0 shadow-md animate-pulse">
+      <div className="w-full h-[120px] bg-gray-200" />
+      <div className="p-2.5 space-y-2">
+        <div className="h-4 bg-gray-200 rounded w-3/4" />
+        <div className="h-3 bg-gray-200 rounded w-1/2" />
+      </div>
+    </Card>
+  )
+}
+
+// 스켈레톤 그리드
+function SkeletonGrid({ count }: { count: number }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      {[...Array(count)].map((_, i) => (
+        <Card key={i} className="overflow-hidden border-0 shadow-md animate-pulse">
+          <div className="w-full h-[120px] bg-gray-200" />
+          <div className="p-2.5 space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-3/4" />
+            <div className="h-3 bg-gray-200 rounded w-1/2" />
           </div>
         </Card>
       ))}

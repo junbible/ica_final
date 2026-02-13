@@ -15,6 +15,7 @@ from chatbot.api import router as chatbot_router
 from chatbot.rate_limit import limiter, rate_limit_exceeded_handler, RateLimits
 from auth import auth_router
 from favorites import favorites_router
+from restaurant import restaurant_router
 from database.connection import init_db
 
 # 프론트엔드 빌드 디렉토리
@@ -46,6 +47,10 @@ async def lifespan(app: FastAPI):
         print("⚠️  OPENAI_API_KEY 환경변수를 설정해주세요.")
     else:
         print("✅ OpenAI API 키가 설정되었습니다.")
+    if not os.getenv("KAKAO_REST_API_KEY"):
+        print("⚠️  KAKAO_REST_API_KEY 미설정 — 맛집 검색에 목업 데이터 사용")
+    else:
+        print("✅ 카카오 REST API 키가 설정되었습니다.")
     print("🚀 메뉴 추천 챗봇 API 서버 시작")
     yield
     # 종료 시
@@ -90,6 +95,7 @@ app.add_middleware(
 app.include_router(chatbot_router)
 app.include_router(auth_router)
 app.include_router(favorites_router)
+app.include_router(restaurant_router)
 
 # 프론트엔드 정적 파일 서빙
 if FRONTEND_DIR.exists():

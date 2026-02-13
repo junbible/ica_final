@@ -26,7 +26,7 @@ class Restaurant(BaseModel):
     category: str
     address: str
     phone: str
-    url: str
+    place_url: str
     lat: float
     lng: float
     distance: int

@@ -432,7 +432,7 @@ async def send_message(request: Request, chat_request: ChatRequest) -> ChatRespo
                 category=r.get("category", ""),
                 address=r.get("address", ""),
                 phone=r.get("phone", ""),
-                url=r.get("url", ""),
+                place_url=r.get("place_url", r.get("url", "")),
                 lat=r["lat"],
                 lng=r["lng"],
                 distance=r.get("distance", 0)
