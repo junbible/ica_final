@@ -29,6 +29,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 # OAuth state 저장 (실제 프로덕션에서는 Redis 사용 권장)
 oauth_states: dict[str, str] = {}
+_last_error: str | None = None
 
 
 def get_or_create_user(db: Session, user_info: OAuthUserInfo) -> User:
@@ -150,6 +151,9 @@ async def kakao_callback(
         return response
 
     except Exception as e:
+        global _last_error
+        import traceback
+        _last_error = traceback.format_exc()
         logger.exception(f"Kakao callback error: {e}")
         from urllib.parse import quote
         detail = quote(str(e)[:200])
@@ -248,3 +252,9 @@ async def logout(
 async def get_me(user: User = Depends(get_current_user)):
     """현재 로그인한 사용자 정보"""
     return user
+
+
+@router.get("/debug/last-error")
+async def debug_last_error():
+    """마지막 콜백 에러 확인 (임시)"""
+    return {"last_error": _last_error}
