@@ -83,8 +83,8 @@ def create_auth_response(response: Response, user: User, db: Session) -> None:
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,  # HTTPS에서만
-        samesite="lax",
+        secure=True,
+        samesite="none",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         path="/",
     )
@@ -93,7 +93,7 @@ def create_auth_response(response: Response, user: User, db: Session) -> None:
         value=refresh_token,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         max_age=7 * 24 * 60 * 60,  # 7일
         path="/",
     )
@@ -261,7 +261,6 @@ async def get_me(user: User = Depends(get_current_user)):
 async def debug_config():
     """OAuth 설정 확인 (디버그용, 시크릿 값은 노출하지 않음)"""
     from .oauth import BASE_URL, KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET, KAKAO_REDIRECT_URI, FRONTEND_URL
-    from .jwt_handler import SECRET_KEY
     import os
     return {
         "base_url": BASE_URL,
@@ -273,4 +272,30 @@ async def debug_config():
         "jwt_secret_from_env": bool(os.getenv("JWT_SECRET_KEY")),
         "railway_domain": os.getenv("RAILWAY_PUBLIC_DOMAIN", "not set"),
         "pending_oauth_states": len(oauth_states),
+        "access_token_expire_minutes": ACCESS_TOKEN_EXPIRE_MINUTES,
     }
+
+
+@router.get("/debug/cookies")
+async def debug_cookies(request: Request):
+    """브라우저가 보내는 쿠키 확인 (디버그용)"""
+    access_token = request.cookies.get("access_token")
+    refresh_token = request.cookies.get("refresh_token")
+
+    result = {
+        "access_token_present": bool(access_token),
+        "refresh_token_present": bool(refresh_token),
+        "all_cookies": list(request.cookies.keys()),
+    }
+
+    if access_token:
+        payload = decode_token(access_token)
+        result["access_token_valid"] = bool(payload)
+        if payload:
+            result["access_token_payload"] = {
+                "sub": payload.get("sub"),
+                "type": payload.get("type"),
+                "exp": payload.get("exp"),
+            }
+
+    return result

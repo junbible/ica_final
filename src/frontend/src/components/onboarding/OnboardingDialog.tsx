@@ -55,40 +55,34 @@ export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
               <DialogTitle className="text-2xl font-logo text-primary">
                 nyam!
               </DialogTitle>
-              <DialogDescription className="text-base mt-2">
+              <DialogDescription className="text-base mt-2 text-center">
                 컨디션 맞춤 맛집 추천 서비스
               </DialogDescription>
             </DialogHeader>
 
             <div className="mt-6 space-y-4 w-full">
-              <div className="flex items-start gap-3 text-left p-3 bg-secondary/50 rounded-lg">
-                <ChefHat className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium text-sm">AI 맞춤 추천</p>
-                  <p className="text-xs text-muted-foreground">
-                    오늘 컨디션에 딱 맞는 메뉴를 추천해드려요
-                  </p>
-                </div>
+              <div className="text-center p-3 bg-secondary/50 rounded-lg">
+                <ChefHat className="w-5 h-5 text-primary mx-auto mb-1" />
+                <p className="font-medium text-sm">AI 맞춤 추천</p>
+                <p className="text-xs text-muted-foreground">
+                  오늘 컨디션에 딱 맞는 메뉴를 추천해드려요
+                </p>
               </div>
 
-              <div className="flex items-start gap-3 text-left p-3 bg-secondary/50 rounded-lg">
-                <MapPin className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium text-sm">내 주변 맛집</p>
-                  <p className="text-xs text-muted-foreground">
-                    위치 기반으로 가까운 맛집을 찾아드려요
-                  </p>
-                </div>
+              <div className="text-center p-3 bg-secondary/50 rounded-lg">
+                <MapPin className="w-5 h-5 text-primary mx-auto mb-1" />
+                <p className="font-medium text-sm">내 주변 맛집</p>
+                <p className="text-xs text-muted-foreground">
+                  위치 기반으로 가까운 맛집을 찾아드려요
+                </p>
               </div>
 
-              <div className="flex items-start gap-3 text-left p-3 bg-secondary/50 rounded-lg">
-                <Sparkles className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium text-sm">테마 컬렉션</p>
-                  <p className="text-xs text-muted-foreground">
-                    해장, 데이트, 혼밥 등 상황별 맛집 모음
-                  </p>
-                </div>
+              <div className="text-center p-3 bg-secondary/50 rounded-lg">
+                <Sparkles className="w-5 h-5 text-primary mx-auto mb-1" />
+                <p className="font-medium text-sm">테마 컬렉션</p>
+                <p className="text-xs text-muted-foreground">
+                  해장, 데이트, 혼밥 등 상황별 맛집 모음
+                </p>
               </div>
             </div>
 
@@ -111,7 +105,7 @@ export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
               <DialogTitle className="text-xl">
                 위치 권한이 필요해요
               </DialogTitle>
-              <DialogDescription className="text-base mt-2">
+              <DialogDescription className="text-base mt-2 text-center">
                 내 주변 맛집을 찾으려면<br />
                 위치 정보 접근을 허용해주세요
               </DialogDescription>
@@ -172,7 +166,7 @@ export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
               <DialogTitle className="text-xl">
                 준비 완료!
               </DialogTitle>
-              <DialogDescription className="text-base mt-2">
+              <DialogDescription className="text-base mt-2 text-center">
                 이제 nyam!과 함께<br />
                 맛있는 한 끼를 찾아보세요
               </DialogDescription>
