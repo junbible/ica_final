@@ -59,17 +59,6 @@ export default defineConfig({
               },
             },
           },
-          {
-            urlPattern: /^https:\/\/.*\.kakao\.com\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'kakao-api',
-              expiration: {
-                maxEntries: 20,
-                maxAgeSeconds: 60 * 60, // 1 hour
-              },
-            },
-          },
         ],
       },
     }),

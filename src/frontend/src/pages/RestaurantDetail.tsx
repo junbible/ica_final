@@ -18,68 +18,47 @@ import { FavoriteButton } from "@/components/FavoriteButton"
 import { LoginDialog } from "@/components/auth/LoginDialog"
 import { getCategoryImage } from "@/data/restaurants"
 import { getRestaurantDetail, searchRestaurants, getRestaurantReviews, getRestaurantInfo, type KakaoRestaurant, type Review, type PlaceInfo } from "@/lib/restaurant-api"
+import { loadKakaoMaps } from "@/lib/kakao-maps"
 import { useToast } from "@/components/ui/toast"
-
-declare global {
-  interface Window {
-    kakao: any
-  }
-}
 
 function DetailMap({ lat, lng, name }: { lat: number; lng: number; name: string }) {
   const mapRef = useRef<HTMLDivElement>(null)
-  const [mapReady, setMapReady] = useState(false)
 
-  // 1단계: SDK 로딩 대기
   useEffect(() => {
-    if (window.kakao?.maps?.LatLng) {
-      setMapReady(true)
-      return
-    }
-    if (window.kakao?.maps?.load) {
-      window.kakao.maps.load(() => setMapReady(true))
-      return
-    }
-    let attempts = 0
-    const interval = setInterval(() => {
-      attempts++
-      if (window.kakao?.maps?.load) {
-        clearInterval(interval)
-        window.kakao.maps.load(() => setMapReady(true))
-      } else if (attempts >= 30) {
-        clearInterval(interval)
-      }
-    }, 500)
-    return () => clearInterval(interval)
-  }, [])
-
-  // 2단계: SDK 로드 완료 + 좌표 변경 시 지도 생성
-  useEffect(() => {
-    if (!mapReady || !mapRef.current) return
+    if (!mapRef.current) return
 
     const container = mapRef.current
-    // 기존 지도 DOM 초기화
-    container.innerHTML = ""
+    let cancelled = false
 
-    const position = new window.kakao.maps.LatLng(lat, lng)
-    const map = new window.kakao.maps.Map(container, {
-      center: position,
-      level: 3,
-    })
+    loadKakaoMaps()
+      .then(() => {
+        if (cancelled || !container) return
 
-    new window.kakao.maps.Marker({ map, position })
-    new window.kakao.maps.CustomOverlay({
-      map,
-      position,
-      content: `<div style="padding:4px 10px;background:white;border-radius:20px;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-8px)">${name}</div>`,
-      yAnchor: 2.2,
-    })
+        container.innerHTML = ""
+        const kakao = window.kakao
 
-    // 컨테이너 리사이즈 후 센터 재조정
-    setTimeout(() => map.relayout(), 200)
-  }, [mapReady, lat, lng, name])
+        const position = new kakao.maps.LatLng(lat, lng)
+        const map = new kakao.maps.Map(container, {
+          center: position,
+          level: 3,
+        })
 
-  return <div ref={mapRef} className="w-full" style={{ height: "180px", minHeight: "180px" }} />
+        new kakao.maps.Marker({ map, position })
+        new kakao.maps.CustomOverlay({
+          map,
+          position,
+          content: `<div style="padding:4px 10px;background:white;border-radius:20px;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-8px)">${name}</div>`,
+          yAnchor: 2.2,
+        })
+
+        setTimeout(() => map.relayout(), 200)
+      })
+      .catch(() => {})
+
+    return () => { cancelled = true }
+  }, [lat, lng, name])
+
+  return <div ref={mapRef} className="w-full bg-gray-100" style={{ height: "180px", minHeight: "180px" }} />
 }
 
 export function RestaurantDetail() {
