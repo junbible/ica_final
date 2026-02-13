@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Navigation,
   Star,
+  CalendarCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -504,10 +505,10 @@ export function RestaurantDetail() {
         <Button
           size="lg"
           className="flex-1 gap-2 bg-primary hover:bg-primary/90"
-          onClick={handleOpenKakaoMap}
+          onClick={() => showToast("준비중입니다.", "info")}
         >
-          <ExternalLink className="w-5 h-5" />
-          카카오맵에서 보기
+          <CalendarCheck className="w-5 h-5" />
+          예약하기
         </Button>
       </div>
     </div>
