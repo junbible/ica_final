@@ -77,6 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const errorMessages: Record<string, string> = {
         token_failed: "로그인에 실패했습니다. 다시 시도해주세요.",
         user_info_failed: "사용자 정보를 가져올 수 없습니다.",
+        invalid_state: "로그인 세션이 만료되었습니다. 다시 시도해주세요.",
+        missing_params: "로그인 정보가 누락되었습니다. 다시 시도해주세요.",
         cancelled: "로그인이 취소되었습니다.",
       }
       const message = errorMessages[authError] || "로그인 중 오류가 발생했습니다."

@@ -1,5 +1,6 @@
 """인증 API 라우터"""
 
+import logging
 import secrets
 from datetime import datetime
 from typing import Optional
@@ -7,6 +8,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from database.connection import get_db
 from database.models import User, RefreshToken
@@ -114,32 +117,43 @@ async def kakao_callback(
     db: Session = Depends(get_db),
 ):
     """카카오 OAuth 콜백 처리"""
+    logger.info(f"Kakao callback: code={bool(code)}, state={bool(state)}, error={error}")
+
     if error:
+        logger.warning(f"Kakao callback error from provider: {error}")
         return RedirectResponse(url=f"{FRONTEND_URL}?auth_error={error}")
 
     if not code or not state:
+        logger.warning("Kakao callback missing code or state")
         return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=missing_params")
 
     # State 검증
     if state not in oauth_states or oauth_states[state] != "kakao":
+        logger.warning(f"Invalid state. Received: {state}, stored states: {list(oauth_states.keys())}")
         return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=invalid_state")
 
     del oauth_states[state]
 
     # 액세스 토큰 획득
+    logger.info("Exchanging code for access token...")
     access_token = await KakaoOAuth.get_access_token(code)
     if not access_token:
+        logger.error("Failed to get Kakao access token")
         return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=token_failed")
 
     # 사용자 정보 조회
+    logger.info("Fetching user info from Kakao...")
     user_info = await KakaoOAuth.get_user_info(access_token)
     if not user_info:
+        logger.error("Failed to get Kakao user info")
         return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=user_info_failed")
 
     # 사용자 생성/조회
+    logger.info(f"Creating/updating user: {user_info.nickname}")
     user = get_or_create_user(db, user_info)
 
     # 리다이렉트 응답 생성
+    logger.info(f"Login success, redirecting to {FRONTEND_URL}")
     response = RedirectResponse(url=f"{FRONTEND_URL}?auth_success=true")
     create_auth_response(response, user, db)
 
@@ -236,3 +250,22 @@ async def logout(
 async def get_me(user: User = Depends(get_current_user)):
     """현재 로그인한 사용자 정보"""
     return user
+
+
+@router.get("/debug/config")
+async def debug_config():
+    """OAuth 설정 확인 (디버그용, 시크릿 값은 노출하지 않음)"""
+    from .oauth import BASE_URL, KAKAO_CLIENT_ID, KAKAO_CLIENT_SECRET, KAKAO_REDIRECT_URI, FRONTEND_URL
+    from .jwt_handler import SECRET_KEY
+    import os
+    return {
+        "base_url": BASE_URL,
+        "redirect_uri": KAKAO_REDIRECT_URI,
+        "frontend_url": FRONTEND_URL,
+        "kakao_client_id_set": bool(KAKAO_CLIENT_ID),
+        "kakao_client_id_prefix": KAKAO_CLIENT_ID[:4] + "..." if KAKAO_CLIENT_ID else "",
+        "kakao_client_secret_set": bool(KAKAO_CLIENT_SECRET),
+        "jwt_secret_from_env": bool(os.getenv("JWT_SECRET_KEY")),
+        "railway_domain": os.getenv("RAILWAY_PUBLIC_DOMAIN", "not set"),
+        "pending_oauth_states": len(oauth_states),
+    }

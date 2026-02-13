@@ -51,6 +51,10 @@ async def lifespan(app: FastAPI):
         print("⚠️  KAKAO_REST_API_KEY 미설정 — 맛집 검색에 목업 데이터 사용")
     else:
         print("✅ 카카오 REST API 키가 설정되었습니다.")
+    if not os.getenv("JWT_SECRET_KEY"):
+        print("⚠️  JWT_SECRET_KEY 미설정 — 배포 시마다 랜덤 키 생성 (기존 로그인 세션 무효화됨)")
+    else:
+        print("✅ JWT 시크릿 키가 설정되었습니다.")
     print("🚀 메뉴 추천 챗봇 API 서버 시작")
     yield
     # 종료 시
