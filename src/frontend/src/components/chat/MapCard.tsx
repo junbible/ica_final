@@ -94,19 +94,16 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
 
   return (
     <Card className="overflow-hidden border-0 shadow-lg mt-2">
-      {/* 지도 */}
-      <div
-        ref={mapRef}
-        className="w-full bg-gray-100"
-        style={{ height: "200px", minHeight: "200px" }}
-      >
+      {/* 지도 — mapRef는 카카오 SDK 전용, React 자식 노드 없음 */}
+      <div className="w-full bg-gray-100 relative" style={{ height: "200px", minHeight: "200px" }}>
+        <div ref={mapRef} className="w-full h-full" />
         {!mapLoaded && !mapError && (
-          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+          <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
             지도 로딩 중...
           </div>
         )}
         {mapError && (
-          <div className="w-full h-full flex items-center justify-center text-red-400 text-xs px-4 text-center">
+          <div className="absolute inset-0 flex items-center justify-center text-red-400 text-xs px-4 text-center">
             {mapError}
           </div>
         )}
