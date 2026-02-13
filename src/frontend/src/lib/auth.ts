@@ -62,10 +62,3 @@ export async function logout(): Promise<void> {
 export function getKakaoLoginUrl(): string {
   return `${API_URL}/auth/kakao/login`
 }
-
-/**
- * 구글 로그인 URL
- */
-export function getGoogleLoginUrl(): string {
-  return `${API_URL}/auth/google/login`
-}

@@ -156,7 +156,7 @@ export function MyPage() {
               </p>
               <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
                 <span className="w-2 h-2 bg-amber-500 rounded-full" />
-                {user.provider === "kakao" ? "카카오" : "구글"} 연동
+                카카오 연동
               </div>
             </div>
           </div>

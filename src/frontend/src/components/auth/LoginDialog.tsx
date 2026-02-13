@@ -6,7 +6,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { SocialLoginButton } from "./SocialLoginButton"
-import { getKakaoLoginUrl, getGoogleLoginUrl } from "@/lib/auth"
+import { getKakaoLoginUrl } from "@/lib/auth"
 
 interface LoginDialogProps {
   open: boolean
@@ -16,10 +16,6 @@ interface LoginDialogProps {
 export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
   const handleKakaoLogin = () => {
     window.location.href = getKakaoLoginUrl()
-  }
-
-  const handleGoogleLogin = () => {
-    window.location.href = getGoogleLoginUrl()
   }
 
   return (
@@ -38,7 +34,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
             <DialogTitle className="text-xl font-logo text-primary">
               nyam! 로그인
             </DialogTitle>
-            <DialogDescription className="text-base mt-2">
+            <DialogDescription className="text-base mt-2 text-center">
               로그인하면 맞춤 추천과<br />
               즐겨찾기 기능을 이용할 수 있어요
             </DialogDescription>
@@ -48,10 +44,6 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
             <SocialLoginButton
               provider="kakao"
               onClick={handleKakaoLogin}
-            />
-            <SocialLoginButton
-              provider="google"
-              onClick={handleGoogleLogin}
             />
           </div>
 

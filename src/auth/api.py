@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.models import User, RefreshToken
-from .oauth import KakaoOAuth, GoogleOAuth, FRONTEND_URL, OAuthUserInfo
+from .oauth import KakaoOAuth, FRONTEND_URL, OAuthUserInfo
 from .jwt_handler import (
     create_access_token,
     create_refresh_token,
@@ -145,55 +145,6 @@ async def kakao_callback(
 
     return response
 
-
-# ==================== 구글 OAuth ====================
-
-@router.get("/google/login")
-async def google_login():
-    """구글 로그인 시작"""
-    state = secrets.token_urlsafe(16)
-    oauth_states[state] = "google"
-    return RedirectResponse(url=GoogleOAuth.get_authorization_url(state))
-
-
-@router.get("/google/callback")
-async def google_callback(
-    code: Optional[str] = None,
-    state: Optional[str] = None,
-    error: Optional[str] = None,
-    db: Session = Depends(get_db),
-):
-    """구글 OAuth 콜백 처리"""
-    if error:
-        return RedirectResponse(url=f"{FRONTEND_URL}?auth_error={error}")
-
-    if not code or not state:
-        return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=missing_params")
-
-    # State 검증
-    if state not in oauth_states or oauth_states[state] != "google":
-        return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=invalid_state")
-
-    del oauth_states[state]
-
-    # 액세스 토큰 획득
-    access_token = await GoogleOAuth.get_access_token(code)
-    if not access_token:
-        return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=token_failed")
-
-    # 사용자 정보 조회
-    user_info = await GoogleOAuth.get_user_info(access_token)
-    if not user_info:
-        return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=user_info_failed")
-
-    # 사용자 생성/조회
-    user = get_or_create_user(db, user_info)
-
-    # 리다이렉트 응답 생성
-    response = RedirectResponse(url=f"{FRONTEND_URL}?auth_success=true")
-    create_auth_response(response, user, db)
-
-    return response
 
 
 # ==================== 토큰 관리 ====================
