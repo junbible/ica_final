@@ -72,9 +72,9 @@ def get_time_context() -> dict:
 # 메뉴 이미지 데이터베이스 (Unsplash 무료 이미지)
 MENU_DATABASE = {
     "삼계탕": {
-        "emoji": "🍗",
+        "emoji": "🍲",
         "description": "영양 만점 보양식, 따끈한 국물이 몸을 녹여줘요",
-        "image_url": "https://images.unsplash.com/photo-1569058242567-93de6f36f8eb?w=400",
+        "image_url": "https://images.unsplash.com/photo-1574484284002-952d92456975?w=400",
         "tags": ["보양식", "한식", "국물"]
     },
     "삼겹살": {
@@ -152,7 +152,7 @@ MENU_DATABASE = {
     "족발": {
         "emoji": "🦶",
         "description": "쫄깃한 족발과 새우젓의 환상 조합",
-        "image_url": "https://images.unsplash.com/photo-1583224994076-b456e61ff42f?w=400",
+        "image_url": "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400",
         "tags": ["야식", "회식", "안주"]
     },
     "떡볶이": {
