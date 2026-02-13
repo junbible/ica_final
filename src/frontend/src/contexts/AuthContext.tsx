@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
+import { useNavigate } from "react-router-dom"
 import { getCurrentUser, logout as apiLogout, refreshToken, exchangeAuthCode, type User } from "@/lib/auth"
 import { useToast } from "@/components/ui/toast"
 
@@ -17,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { showToast } = useToast()
+  const navigate = useNavigate()
 
   const refreshUser = useCallback(async () => {
     try {
@@ -57,6 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (exchangedUser) {
           setUser(exchangedUser as User)
           showToast("로그인되었습니다", "success")
+          // 로그인 전 페이지로 복원
+          const redirect = localStorage.getItem("login_redirect")
+          localStorage.removeItem("login_redirect")
+          if (redirect && redirect !== "/") {
+            navigate(redirect, { replace: true })
+          }
         } else {
           showToast("로그인에 실패했습니다. 다시 시도해주세요.", "error")
         }

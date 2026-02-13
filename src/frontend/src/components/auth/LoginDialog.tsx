@@ -15,6 +15,7 @@ interface LoginDialogProps {
 
 export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
   const handleKakaoLogin = () => {
+    localStorage.setItem("login_redirect", window.location.pathname + window.location.search)
     window.location.href = getKakaoLoginUrl()
   }
 
