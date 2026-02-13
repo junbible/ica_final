@@ -3,6 +3,7 @@
 import os
 import uuid
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from openai import AsyncOpenAI
 from fastapi import APIRouter, HTTPException, Request
 from dotenv import load_dotenv
@@ -22,8 +23,8 @@ sessions: dict[str, dict] = {}
 
 
 def get_time_context() -> dict:
-    """현재 시간대 컨텍스트 반환"""
-    hour = datetime.now().hour
+    """현재 시간대 컨텍스트 반환 (한국 시간 기준)"""
+    hour = datetime.now(ZoneInfo("Asia/Seoul")).hour
 
     if 5 <= hour < 10:
         return {
@@ -216,7 +217,7 @@ def get_system_prompt() -> str:
     return f"""당신은 친근한 메뉴 추천 챗봇 "냠냠봇"입니다.
 
 ## 현재 시간 정보
-- 시간대: {time_ctx['period']} ({datetime.now().strftime('%H:%M')})
+- 시간대: {time_ctx['period']} ({datetime.now(ZoneInfo("Asia/Seoul")).strftime('%H:%M')})
 - 식사: {time_ctx['meal']}
 
 ## 역할
