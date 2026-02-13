@@ -104,6 +104,31 @@ export async function getRestaurantReviews(placeId: string): Promise<ReviewRespo
   }
 }
 
+export interface BusinessHour {
+  day: string
+  time: string
+  break_time: string
+  off: boolean
+  today: boolean
+}
+
+export interface PlaceInfo {
+  status: string
+  status_desc: string
+  hours: BusinessHour[]
+  homepage: string
+}
+
+export async function getRestaurantInfo(placeId: string): Promise<PlaceInfo> {
+  try {
+    const res = await fetch(`${API_BASE}/api/restaurants/${placeId}/info`)
+    if (!res.ok) return { status: "", status_desc: "", hours: [], homepage: "" }
+    return res.json()
+  } catch {
+    return { status: "", status_desc: "", hours: [], homepage: "" }
+  }
+}
+
 export async function getRestaurantDetail(
   placeId: string,
   name?: string,

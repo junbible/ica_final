@@ -46,6 +46,23 @@ class ReviewResponse(BaseModel):
     avg_score: float
 
 
+class BusinessHour(BaseModel):
+    """영업시간 항목"""
+    day: str               # "금(2/13)"
+    time: str              # "09:00 ~ 18:00" 또는 "휴무일"
+    break_time: str = ""   # "12:30 ~ 13:30 브레이크타임"
+    off: bool = False      # 휴무일 여부
+    today: bool = False    # 오늘 여부
+
+
+class PlaceInfoResponse(BaseModel):
+    """매장 기본정보 응답"""
+    status: str = ""          # "영업 중", "영업 마감"
+    status_desc: str = ""     # "내일 08:00 오픈"
+    hours: list[BusinessHour] = []
+    homepage: str = ""
+
+
 class RegionInfo(BaseModel):
     """좌표 → 지역 정보"""
     region_1depth: str     # "서울특별시"

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { MapPin, ExternalLink, Phone, ChevronRight } from "lucide-react"
+import { MapPin, Phone, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
@@ -185,20 +185,6 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
                     <ChevronRight className="w-3 h-3 mr-1" />
                     상세보기
                   </Button>
-                  {restaurant.place_url && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs px-2"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        window.open(restaurant.place_url, "_blank")
-                      }}
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      카카오맵
-                    </Button>
-                  )}
                   {restaurant.phone && (
                     <Button
                       variant="outline"

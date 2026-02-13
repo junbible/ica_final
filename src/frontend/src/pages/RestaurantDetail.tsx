@@ -5,10 +5,11 @@ import {
   Share2,
   Phone,
   MapPin,
-  ExternalLink,
   Navigation,
   Star,
   CalendarCheck,
+  Clock,
+  Globe,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -16,7 +17,7 @@ import { LazyImage, getOptimizedImageUrl } from "@/components/ui/lazy-image"
 import { FavoriteButton } from "@/components/FavoriteButton"
 import { LoginDialog } from "@/components/auth/LoginDialog"
 import { getCategoryImage } from "@/data/restaurants"
-import { getRestaurantDetail, searchRestaurants, getRestaurantReviews, type KakaoRestaurant, type Review } from "@/lib/restaurant-api"
+import { getRestaurantDetail, searchRestaurants, getRestaurantReviews, getRestaurantInfo, type KakaoRestaurant, type Review, type PlaceInfo } from "@/lib/restaurant-api"
 import { useToast } from "@/components/ui/toast"
 
 declare global {
@@ -27,26 +28,31 @@ declare global {
 
 function DetailMap({ lat, lng, name }: { lat: number; lng: number; name: string }) {
   const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<any>(null)
 
   const initMap = useCallback(() => {
-    if (!mapRef.current || !window.kakao?.maps?.LatLng) return
+    const container = mapRef.current
+    if (!container || !window.kakao?.maps?.LatLng) return
+    if (mapInstanceRef.current) return // 이미 초기화됨
 
-    const position = new window.kakao.maps.LatLng(lat, lng)
-    const map = new window.kakao.maps.Map(mapRef.current, {
-      center: position,
-      level: 3,
-    })
+    // 컨테이너가 레이아웃된 후 초기화
+    setTimeout(() => {
+      const position = new window.kakao.maps.LatLng(lat, lng)
+      const map = new window.kakao.maps.Map(container, {
+        center: position,
+        level: 3,
+      })
+      mapInstanceRef.current = map
 
-    // 마커
-    new window.kakao.maps.Marker({ map, position })
+      new window.kakao.maps.Marker({ map, position })
 
-    // 이름 오버레이
-    const overlay = new window.kakao.maps.CustomOverlay({
-      position,
-      content: `<div style="padding:4px 10px;background:white;border-radius:20px;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-8px)">${name}</div>`,
-      yAnchor: 2.2,
-    })
-    overlay.setMap(map)
+      const overlay = new window.kakao.maps.CustomOverlay({
+        position,
+        content: `<div style="padding:4px 10px;background:white;border-radius:20px;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;transform:translateY(-8px)">${name}</div>`,
+        yAnchor: 2.2,
+      })
+      overlay.setMap(map)
+    }, 100)
   }, [lat, lng, name])
 
   useEffect(() => {
@@ -58,7 +64,6 @@ function DetailMap({ lat, lng, name }: { lat: number; lng: number; name: string 
       window.kakao.maps.load(initMap)
       return
     }
-    // SDK 아직 로드 안 된 경우 폴링
     let attempts = 0
     const interval = setInterval(() => {
       attempts++
@@ -72,7 +77,7 @@ function DetailMap({ lat, lng, name }: { lat: number; lng: number; name: string 
     return () => clearInterval(interval)
   }, [initMap])
 
-  return <div ref={mapRef} className="w-full h-[180px]" />
+  return <div ref={mapRef} className="w-full h-[180px] bg-gray-100" />
 }
 
 export function RestaurantDetail() {
@@ -93,6 +98,7 @@ export function RestaurantDetail() {
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [avgScore, setAvgScore] = useState(0)
   const [totalReviewCount, setTotalReviewCount] = useState(0)
+  const [placeInfo, setPlaceInfo] = useState<PlaceInfo | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -142,6 +148,16 @@ export function RestaurantDetail() {
     return () => { cancelled = true }
   }, [id, stateRestaurant])
 
+  // 매장 기본정보 (영업시간 등) 로드
+  useEffect(() => {
+    if (!restaurant?.id) return
+    let cancelled = false
+    getRestaurantInfo(restaurant.id).then((info) => {
+      if (!cancelled) setPlaceInfo(info)
+    })
+    return () => { cancelled = true }
+  }, [restaurant?.id])
+
   // 리뷰 탭 선택 시 리뷰 로드
   useEffect(() => {
     if (activeTab !== "place") return
@@ -170,12 +186,6 @@ export function RestaurantDetail() {
       window.location.href = `tel:${restaurant.phone}`
     } else {
       showToast("전화번호가 등록되지 않았습니다", "info")
-    }
-  }
-
-  const handleOpenKakaoMap = () => {
-    if (restaurant?.place_url) {
-      window.open(restaurant.place_url, "_blank")
     }
   }
 
@@ -378,21 +388,48 @@ export function RestaurantDetail() {
             </Card>
           )}
 
-          {/* 카카오맵 CTA */}
-          <Card
-            className="p-4 border-0 shadow-sm bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors"
-            onClick={handleOpenKakaoMap}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center shrink-0">
-                <ExternalLink className="w-5 h-5 text-amber-700" />
+          {/* 영업시간 */}
+          {placeInfo && (placeInfo.status || placeInfo.hours.length > 0) && (
+            <Card className="p-4 border-0 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold">영업시간</span>
+                {placeInfo.status && (
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    placeInfo.status.includes("영업 중") ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {placeInfo.status}
+                  </span>
+                )}
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-amber-900">카카오맵에서 상세보기</p>
-                <p className="text-xs text-amber-700 mt-0.5">메뉴, 영업시간 등 전체 정보 확인</p>
+              {placeInfo.status_desc && (
+                <p className="text-xs text-muted-foreground mb-2">{placeInfo.status_desc}</p>
+              )}
+              {placeInfo.hours.length > 0 && (
+                <div className="space-y-1.5">
+                  {placeInfo.hours.map((h, i) => (
+                    <div key={i} className={`flex items-center text-xs ${h.today ? "font-semibold text-foreground" : "text-muted-foreground"} ${h.off ? "text-red-400" : ""}`}>
+                      <span className="w-16 shrink-0">{h.day}</span>
+                      <span>{h.time}</span>
+                      {h.break_time && <span className="ml-2 text-amber-600">({h.break_time})</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* 홈페이지 */}
+          {placeInfo?.homepage && (
+            <Card className="p-3 border-0 shadow-sm">
+              <div className="flex items-center gap-3">
+                <Globe className="w-4 h-4 text-primary shrink-0" />
+                <a href={placeInfo.homepage} target="_blank" rel="noopener noreferrer" className="text-sm text-primary font-medium truncate">
+                  {placeInfo.homepage.replace(/^https?:\/\//, "")}
+                </a>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
         </div>
       ) : (
         <div className="bg-secondary/30 p-4 space-y-3">
@@ -476,18 +513,6 @@ export function RestaurantDetail() {
             </Card>
           )}
 
-          {/* 카카오맵에서 더보기 */}
-          <div className="flex justify-center pt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs"
-              onClick={handleOpenKakaoMap}
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              카카오맵에서 더보기
-            </Button>
-          </div>
         </div>
       )}
 

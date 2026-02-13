@@ -350,6 +350,85 @@ async def fetch_place_reviews(place_id: str) -> dict:
         return {"reviews": [], "total_count": 0, "avg_score": 0}
 
 
+async def fetch_place_info(place_id: str) -> dict:
+    """카카오 플레이스에서 영업시간 등 기본정보 가져오기
+
+    Returns:
+        {"status": str, "status_desc": str, "hours": [...], "homepage": str}
+    """
+    empty = {"status": "", "status_desc": "", "hours": [], "homepage": ""}
+
+    if place_id.startswith("mock_"):
+        return empty
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://place-api.map.kakao.com/places/panel3/{place_id}",
+                headers={
+                    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15",
+                    "Origin": "https://place.map.kakao.com",
+                    "Referer": f"https://place.map.kakao.com/{place_id}",
+                    "appVersion": "6.6.0",
+                    "pf": "MW",
+                },
+                timeout=5.0,
+                follow_redirects=True,
+            )
+            if resp.status_code != 200:
+                return empty
+
+            data = resp.json()
+
+            # 영업 상태
+            open_hours = data.get("open_hours") or {}
+            headline = open_hours.get("headline") or {}
+            status = headline.get("display_text", "")
+            status_desc = headline.get("display_text_info", "")
+
+            # 주간 영업시간
+            hours = []
+            week = open_hours.get("week_from_today") or {}
+            for period in (week.get("week_periods") or []):
+                for day in (period.get("days") or []):
+                    label = day.get("day_of_the_week_desc", "")
+                    on = day.get("on_days")
+                    if on:
+                        time_str = on.get("start_end_time_desc", "")
+                        breaks = on.get("break_times_desc") or []
+                        hours.append({
+                            "day": label,
+                            "time": time_str,
+                            "break_time": breaks[0] if breaks else "",
+                            "off": False,
+                            "today": day.get("is_highlight", False),
+                        })
+                    else:
+                        hours.append({
+                            "day": label,
+                            "time": day.get("off_days_desc", "휴무일"),
+                            "break_time": "",
+                            "off": True,
+                            "today": day.get("is_highlight", False),
+                        })
+
+            # 홈페이지
+            summary = data.get("summary") or {}
+            homepages = summary.get("homepages") or []
+            homepage = homepages[0] if homepages else ""
+
+            return {
+                "status": status,
+                "status_desc": status_desc,
+                "hours": hours,
+                "homepage": homepage,
+            }
+
+    except Exception as e:
+        print(f"Kakao place info error: {e}")
+        return empty
+
+
 # og:image 캐시 (place_id -> image_url)
 _image_cache: dict[str, str] = {}
 
