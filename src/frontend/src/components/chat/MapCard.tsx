@@ -26,67 +26,93 @@ declare global {
   }
 }
 
+function initMap(
+  container: HTMLDivElement,
+  restaurants: Restaurant[],
+) {
+  const kakao = window.kakao
+
+  const avgLat = restaurants.reduce((sum, r) => sum + r.lat, 0) / restaurants.length
+  const avgLng = restaurants.reduce((sum, r) => sum + r.lng, 0) / restaurants.length
+
+  const map = new kakao.maps.Map(container, {
+    center: new kakao.maps.LatLng(avgLat, avgLng),
+    level: 4,
+  })
+
+  restaurants.forEach((restaurant, index) => {
+    const position = new kakao.maps.LatLng(restaurant.lat, restaurant.lng)
+    const content = `
+      <div style="
+        background: linear-gradient(135deg, #FBBF24, #F59E0B);
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        cursor: pointer;
+        border: 2px solid white;
+      ">${index + 1}</div>
+    `
+    new kakao.maps.CustomOverlay({ position, content, yAnchor: 0.5 }).setMap(map)
+  })
+}
+
 export function MapCard({ restaurants }: MapCardProps) {
   const navigate = useNavigate()
   const mapRef = useRef<HTMLDivElement>(null)
   const [selectedRestaurant] = useState<Restaurant | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [mapError, setMapError] = useState(false)
 
   useEffect(() => {
     if (!restaurants.length || !mapRef.current) return
 
-    // Kakao Maps SDK 로드 확인
-    if (!window.kakao || !window.kakao.maps) {
-      console.error("Kakao Maps SDK not loaded")
+    const container = mapRef.current
+
+    const tryInitMap = () => {
+      try {
+        initMap(container, restaurants)
+        setMapLoaded(true)
+      } catch (e) {
+        console.error("Map init error:", e)
+        setMapError(true)
+      }
+    }
+
+    // SDK가 이미 완전히 로드된 경우 (LatLng 클래스 존재 확인)
+    if (window.kakao?.maps?.LatLng) {
+      tryInitMap()
       return
     }
 
-    window.kakao.maps.load(() => {
-      setMapLoaded(true)
+    // SDK 로더가 존재하면 load() 호출
+    if (window.kakao?.maps?.load) {
+      window.kakao.maps.load(() => tryInitMap())
+      return
+    }
 
-      // 지도 중심 계산 (맛집들의 평균 좌표)
-      const avgLat = restaurants.reduce((sum, r) => sum + r.lat, 0) / restaurants.length
-      const avgLng = restaurants.reduce((sum, r) => sum + r.lng, 0) / restaurants.length
-
-      const mapOption = {
-        center: new window.kakao.maps.LatLng(avgLat, avgLng),
-        level: 4
+    // SDK 자체가 아직 로드되지 않은 경우 — 폴링으로 대기
+    let attempts = 0
+    const maxAttempts = 20
+    const interval = setInterval(() => {
+      attempts++
+      if (window.kakao?.maps?.load) {
+        clearInterval(interval)
+        window.kakao.maps.load(() => tryInitMap())
+      } else if (attempts >= maxAttempts) {
+        clearInterval(interval)
+        console.error("Kakao Maps SDK failed to load after timeout")
+        setMapError(true)
       }
+    }, 500)
 
-      const map = new window.kakao.maps.Map(mapRef.current, mapOption)
-
-      // 마커 추가
-      restaurants.forEach((restaurant, index) => {
-        const markerPosition = new window.kakao.maps.LatLng(restaurant.lat, restaurant.lng)
-
-        // 커스텀 오버레이 (숫자 마커)
-        const content = `
-          <div style="
-            background: linear-gradient(135deg, #FBBF24, #F59E0B);
-            color: white;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            cursor: pointer;
-            border: 2px solid white;
-          ">${index + 1}</div>
-        `
-
-        const customOverlay = new window.kakao.maps.CustomOverlay({
-          position: markerPosition,
-          content: content,
-          yAnchor: 0.5
-        })
-
-        customOverlay.setMap(map)
-      })
-    })
+    return () => clearInterval(interval)
   }, [restaurants])
 
   if (!restaurants.length) return null
@@ -99,9 +125,14 @@ export function MapCard({ restaurants }: MapCardProps) {
         className="w-full h-[200px] bg-gray-100"
         style={{ minHeight: "200px" }}
       >
-        {!mapLoaded && (
+        {!mapLoaded && !mapError && (
           <div className="w-full h-full flex items-center justify-center text-gray-400">
             지도 로딩 중...
+          </div>
+        )}
+        {mapError && (
+          <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+            지도를 불러올 수 없습니다
           </div>
         )}
       </div>
