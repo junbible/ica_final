@@ -9,6 +9,7 @@ export interface Restaurant {
   id: string
   name: string
   category: string
+  full_category?: string
   address: string
   phone: string
   place_url: string

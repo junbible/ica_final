@@ -24,6 +24,7 @@ class Restaurant(BaseModel):
     id: str
     name: str
     category: str
+    full_category: str = ""
     address: str
     phone: str
     place_url: str

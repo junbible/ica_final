@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from dotenv import load_dotenv
 from .schemas import ChatRequest, ChatResponse, SessionInfo, ResetResponse, Restaurant, MenuRecommendation
 from .kakao_api import search_by_condition, LOCATION_COORDS
+from restaurant.kakao_client import search_keyword
 from .rate_limit import limiter, RateLimits
 
 load_dotenv()
@@ -380,8 +381,21 @@ async def get_response(message: str, session_id: str) -> tuple[str, list[dict] |
     restaurants = None
     restaurant_info = ""
 
-    if location and session.get("waiting_for_location"):
-        # 맛집 검색
+    if location and len(message.strip()) > len(location) + 1:
+        # 위치 + 음식 키워드 직접 검색 (예: "강남역 짬뽕", "홍대 파스타")
+        coords = LOCATION_COORDS.get(location, LOCATION_COORDS["강남"])
+        result = await search_keyword(
+            query=message,
+            lat=coords["lat"],
+            lng=coords["lng"],
+            radius=2000,
+            size=5,
+        )
+        restaurants = result["documents"][:5]
+        restaurant_info = format_restaurant_response(location, restaurants)
+        session["waiting_for_location"] = False
+    elif location and session.get("waiting_for_location"):
+        # 위치만 입력 + 이전 컨디션 기반 검색 (예: "피곤해요" → "강남")
         condition_key = session.get("condition_key", "fatigue_1")
         restaurants = await search_by_condition(location, condition_key, size=5)
         restaurant_info = format_restaurant_response(location, restaurants)
@@ -431,6 +445,7 @@ async def send_message(request: Request, chat_request: ChatRequest) -> ChatRespo
                 id=r["id"],
                 name=r["name"],
                 category=r.get("category", ""),
+                full_category=r.get("full_category", ""),
                 address=r.get("address", ""),
                 phone=r.get("phone", ""),
                 place_url=r.get("place_url", r.get("url", "")),
