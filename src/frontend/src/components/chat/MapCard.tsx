@@ -28,12 +28,12 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
 
   const goToRestaurant = (restaurant: Restaurant) => {
     const url = `/restaurant/${restaurant.id}?name=${encodeURIComponent(restaurant.name)}`
-    // navigate 먼저 실행 후 모달 닫기 (타이밍 이슈 방지)
     navigate(url, { state: { restaurant } })
-    // 약간의 지연 후 모달 닫기 — navigate가 완료된 후 실행
     setTimeout(() => onNavigate?.(), 0)
   }
+
   const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstanceRef = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [mapError, setMapError] = useState<string | null>(null)
 
@@ -47,7 +47,6 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
       .then(() => {
         if (cancelled || !container) return
 
-        container.innerHTML = ""
         const kakao = window.kakao
 
         const avgLat = restaurants.reduce((sum, r) => sum + r.lat, 0) / restaurants.length
@@ -57,6 +56,7 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
           center: new kakao.maps.LatLng(avgLat, avgLng),
           level: 4,
         })
+        mapInstanceRef.current = map
 
         restaurants.forEach((restaurant, index) => {
           const position = new kakao.maps.LatLng(restaurant.lat, restaurant.lng)
@@ -87,26 +87,33 @@ export function MapCard({ restaurants, onNavigate }: MapCardProps) {
         if (!cancelled) setMapError(e?.message || "지도 로딩 실패")
       })
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      // 언마운트 시 맵 컨테이너 정리 — React removeChild 충돌 방지
+      mapInstanceRef.current = null
+      try { container.innerHTML = "" } catch {}
+    }
   }, [restaurants])
 
   if (!restaurants.length) return null
 
   return (
     <Card className="overflow-hidden border-0 shadow-lg mt-2">
-      {/* 지도 — mapRef는 카카오 SDK 전용, React 자식 노드 없음 */}
+      {/* 지도 — 모든 자식을 항상 렌더링, CSS로만 표시 전환 (React DOM 조작 방지) */}
       <div className="w-full bg-gray-100 relative" style={{ height: "200px", minHeight: "200px" }}>
         <div ref={mapRef} className="w-full h-full" />
-        {!mapLoaded && !mapError && (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-            지도 로딩 중...
-          </div>
-        )}
-        {mapError && (
-          <div className="absolute inset-0 flex items-center justify-center text-red-400 text-xs px-4 text-center">
-            {mapError}
-          </div>
-        )}
+        <div
+          className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm pointer-events-none"
+          style={{ display: mapLoaded || mapError ? "none" : undefined }}
+        >
+          지도 로딩 중...
+        </div>
+        <div
+          className="absolute inset-0 flex items-center justify-center text-red-400 text-xs px-4 text-center pointer-events-none"
+          style={{ display: mapError ? undefined : "none" }}
+        >
+          {mapError || ""}
+        </div>
       </div>
 
       {/* 맛집 리스트 */}
