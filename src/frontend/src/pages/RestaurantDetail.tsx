@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import {
   ArrowLeft,
@@ -7,6 +7,7 @@ import {
   MapPin,
   ExternalLink,
   Navigation,
+  Star,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -22,7 +23,6 @@ export function RestaurantDetail() {
   const navigate = useNavigate()
   const location = useLocation()
   const { showToast } = useToast()
-  const mapRef = useRef<HTMLDivElement>(null)
 
   // React Router state로 전달된 레스토랑 데이터 (즉시 로딩)
   const stateRestaurant = (location.state as { restaurant?: KakaoRestaurant })?.restaurant || null
@@ -31,6 +31,7 @@ export function RestaurantDetail() {
   const [isLoading, setIsLoading] = useState(!stateRestaurant)
   const [error, setError] = useState<string | null>(null)
   const [showLoginDialog, setShowLoginDialog] = useState(false)
+  const [activeTab, setActiveTab] = useState<"info" | "place">("info")
 
   useEffect(() => {
     // state로 이미 데이터가 있으면 API 호출 불필요
@@ -75,29 +76,6 @@ export function RestaurantDetail() {
     fetchDetail()
     return () => { cancelled = true }
   }, [id, stateRestaurant])
-
-  // 카카오 지도 SDK 렌더링
-  useEffect(() => {
-    if (!restaurant || !mapRef.current) return
-    if (!window.kakao || !window.kakao.maps) return
-
-    window.kakao.maps.load(() => {
-      const position = new window.kakao.maps.LatLng(restaurant.lat, restaurant.lng)
-      const map = new window.kakao.maps.Map(mapRef.current, {
-        center: position,
-        level: 3,
-      })
-
-      // 마커
-      const marker = new window.kakao.maps.Marker({ map, position })
-
-      // 인포윈도우
-      const infowindow = new window.kakao.maps.InfoWindow({
-        content: `<div style="padding:4px 8px;font-size:12px;white-space:nowrap;">${restaurant.name}</div>`,
-      })
-      infowindow.open(map, marker)
-    })
-  }, [restaurant])
 
   const handleCall = () => {
     if (restaurant?.phone) {
@@ -151,7 +129,7 @@ export function RestaurantDetail() {
           </div>
         </header>
         <div className="animate-pulse">
-          <div className="aspect-[16/9] bg-gray-200" />
+          <div className="aspect-[2/1] bg-gray-200" />
           <div className="px-4 py-5 space-y-3">
             <div className="h-6 bg-gray-200 rounded w-2/3" />
             <div className="h-4 bg-gray-200 rounded w-1/3" />
@@ -181,6 +159,9 @@ export function RestaurantDetail() {
 
   const categoryImage = getCategoryImage(restaurant.full_category || restaurant.category)
 
+  // place_url에서 place_id 추출 (place.map.kakao.com/{id} 형태)
+  const kakaoPlaceId = restaurant.place_url?.match(/\/(\d+)$/)?.[1] || restaurant.id
+
   return (
     <div className="min-h-screen bg-background pb-24">
       <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
@@ -208,118 +189,157 @@ export function RestaurantDetail() {
       </header>
 
       {/* 카테고리 기본 이미지 */}
-      <div className="relative aspect-[16/9] overflow-hidden">
+      <div className="relative aspect-[2/1] overflow-hidden">
         <LazyImage
           src={getOptimizedImageUrl(categoryImage, 800)}
           alt={restaurant.name}
           className="w-full h-full object-cover"
           wrapperClassName="w-full h-full"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        <div className="absolute bottom-4 left-4 right-4 text-white">
+          <h1 className="text-xl font-bold drop-shadow-md">{restaurant.name}</h1>
+          <p className="text-sm text-white/80 mt-0.5">{restaurant.category}</p>
+        </div>
       </div>
 
-      {/* 기본 정보 */}
-      <div className="px-4 py-5 bg-white">
-        <h1 className="text-xl font-bold mb-1">{restaurant.name}</h1>
-        <p className="text-sm text-muted-foreground mb-3">{restaurant.category}</p>
-
-        {/* 거리 */}
+      {/* 기본 정보 바 */}
+      <div className="px-4 py-3 bg-white flex items-center gap-4 text-sm border-b border-border">
         {restaurant.distance > 0 && (
-          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-            <Navigation className="w-4 h-4" />
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Navigation className="w-3.5 h-3.5" />
             <span>{restaurant.distance}m</span>
           </div>
         )}
-
-        {/* 태그 */}
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <span key={tag} className="px-2 py-1 bg-secondary text-xs rounded-full">
+        {restaurant.phone && (
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Phone className="w-3.5 h-3.5" />
+            <span>{restaurant.phone}</span>
+          </div>
+        )}
+        <div className="flex flex-wrap gap-1.5 ml-auto">
+          {tags.slice(-2).map((tag) => (
+            <span key={tag} className="px-2 py-0.5 bg-secondary text-xs rounded-full">
               #{tag}
             </span>
           ))}
         </div>
       </div>
 
-      {/* 액션 버튼 */}
-      <div className="flex gap-3 px-4 py-4 bg-white border-t border-border">
-        <Button
-          variant="outline"
-          className="flex-1 gap-2"
-          onClick={handleCall}
+      {/* 탭 */}
+      <div className="flex bg-white border-b border-border">
+        <button
+          onClick={() => setActiveTab("info")}
+          className={`flex-1 py-3 text-sm font-medium text-center transition-colors relative ${
+            activeTab === "info" ? "text-primary" : "text-muted-foreground"
+          }`}
         >
-          <Phone className="w-4 h-4" />
-          전화
-        </Button>
-        <Button
-          className="flex-1 gap-2 bg-primary hover:bg-primary/90"
-          onClick={handleOpenKakaoMap}
+          <div className="flex items-center justify-center gap-1.5">
+            <MapPin className="w-4 h-4" />
+            매장 정보
+          </div>
+          {activeTab === "info" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("place")}
+          className={`flex-1 py-3 text-sm font-medium text-center transition-colors relative ${
+            activeTab === "place" ? "text-primary" : "text-muted-foreground"
+          }`}
         >
-          <ExternalLink className="w-4 h-4" />
-          카카오맵에서 보기
-        </Button>
+          <div className="flex items-center justify-center gap-1.5">
+            <Star className="w-4 h-4" />
+            사진 · 리뷰
+          </div>
+          {activeTab === "place" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+          )}
+        </button>
       </div>
 
-      {/* 매장 정보 */}
-      <div className="bg-secondary/30 p-4 space-y-4">
-        {/* 지도 */}
-        <Card className="overflow-hidden border-0 shadow-sm">
-          <div
-            ref={mapRef}
-            className="w-full h-[180px] bg-gray-100"
-          />
-          {restaurant.address && (
-            <div className="p-4">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">{restaurant.address}</p>
-                  <button onClick={handleCopyAddress} className="text-sm text-primary mt-1">
-                    주소 복사
-                  </button>
+      {/* 탭 컨텐츠 */}
+      {activeTab === "info" ? (
+        <div className="bg-secondary/30 p-4 space-y-3">
+          {/* 지도 */}
+          <Card className="overflow-hidden border-0 shadow-sm">
+            <iframe
+              src={`https://map.kakao.com/link/map/${encodeURIComponent(restaurant.name)},${restaurant.lat},${restaurant.lng}`}
+              className="w-full h-[160px] border-0"
+              title="지도"
+            />
+            {restaurant.address && (
+              <div className="p-3">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">{restaurant.address}</p>
+                    <button onClick={handleCopyAddress} className="text-xs text-primary mt-1">
+                      주소 복사
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </Card>
+            )}
+          </Card>
 
-        {/* 전화번호 */}
-        {restaurant.phone && (
-          <Card className="p-4 border-0 shadow-sm">
-            <div className="flex items-start gap-3">
-              <Phone className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium">전화번호</p>
-                <a href={`tel:${restaurant.phone}`} className="text-sm text-primary mt-1 block">
+          {/* 전화번호 */}
+          {restaurant.phone && (
+            <Card className="p-3 border-0 shadow-sm">
+              <div className="flex items-center gap-3">
+                <Phone className="w-4 h-4 text-primary shrink-0" />
+                <a href={`tel:${restaurant.phone}`} className="text-sm text-primary font-medium">
                   {restaurant.phone}
                 </a>
               </div>
+            </Card>
+          )}
+
+          {/* 카카오맵 CTA */}
+          <Card
+            className="p-4 border-0 shadow-sm bg-amber-50 cursor-pointer hover:bg-amber-100 transition-colors"
+            onClick={handleOpenKakaoMap}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center shrink-0">
+                <ExternalLink className="w-5 h-5 text-amber-700" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-900">카카오맵에서 상세보기</p>
+                <p className="text-xs text-amber-700 mt-0.5">메뉴, 영업시간 등 전체 정보 확인</p>
+              </div>
             </div>
           </Card>
-        )}
-
-        {/* 카카오맵 안내 CTA */}
-        <Card className="p-5 border-0 shadow-sm bg-amber-50">
-          <div className="text-center">
-            <p className="text-sm text-amber-800 mb-1 font-medium">
-              메뉴, 리뷰, 영업시간 등 상세 정보는
-            </p>
-            <p className="text-sm text-amber-700 mb-3">
-              카카오맵에서 확인할 수 있어요
-            </p>
+        </div>
+      ) : (
+        <div className="bg-secondary/30">
+          {/* 카카오 플레이스 임베드 */}
+          <div className="bg-white">
+            <iframe
+              src={`https://place.map.kakao.com/m/${kakaoPlaceId}`}
+              className="w-full border-0"
+              style={{ height: "calc(100vh - 220px)", minHeight: "500px" }}
+              title="카카오 플레이스"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+            />
+          </div>
+          {/* 새 창으로 열기 */}
+          <div className="p-3 flex justify-center">
             <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
               onClick={handleOpenKakaoMap}
-              className="bg-amber-500 hover:bg-amber-600 text-white gap-2"
             >
-              <ExternalLink className="w-4 h-4" />
-              카카오맵에서 상세보기
+              <ExternalLink className="w-3.5 h-3.5" />
+              카카오맵 앱에서 열기
             </Button>
           </div>
-        </Card>
-      </div>
+        </div>
+      )}
 
       {/* 하단 고정 버튼 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border p-4 flex gap-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-border p-3 flex gap-3">
         <Button
           variant="outline"
           size="lg"
