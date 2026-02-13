@@ -4,7 +4,6 @@ import os
 import random
 import httpx
 
-KAKAO_API_KEY = os.getenv("KAKAO_REST_API_KEY")
 KAKAO_KEYWORD_URL = "https://dapi.kakao.com/v2/local/search/keyword.json"
 KAKAO_CATEGORY_URL = "https://dapi.kakao.com/v2/local/search/category.json"
 KAKAO_COORD2REGION_URL = "https://dapi.kakao.com/v2/local/geo/coord2regioncode.json"
@@ -118,7 +117,7 @@ async def search_keyword(
     Returns:
         {"documents": [...], "meta": {"total_count": int, "is_end": bool}}
     """
-    if not KAKAO_API_KEY:
+    if not os.getenv("KAKAO_REST_API_KEY"):
         mocks = _get_mock_results(query, size)
         return {"documents": mocks, "meta": {"total_count": len(mocks), "is_end": True}}
 
@@ -138,7 +137,7 @@ async def search_keyword(
         try:
             response = await client.get(
                 KAKAO_KEYWORD_URL,
-                headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
+                headers={"Authorization": f"KakaoAK {os.getenv('KAKAO_REST_API_KEY')}"},
                 params=params,
             )
             if response.status_code == 200:
@@ -174,7 +173,7 @@ async def search_nearby(
     Returns:
         {"documents": [...], "meta": {"total_count": int, "is_end": bool}}
     """
-    if not KAKAO_API_KEY:
+    if not os.getenv("KAKAO_REST_API_KEY"):
         mocks = _get_mock_results("", size)
         return {"documents": mocks, "meta": {"total_count": len(mocks), "is_end": True}}
 
@@ -182,7 +181,7 @@ async def search_nearby(
         try:
             response = await client.get(
                 KAKAO_CATEGORY_URL,
-                headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
+                headers={"Authorization": f"KakaoAK {os.getenv('KAKAO_REST_API_KEY')}"},
                 params={
                     "category_group_code": category_code,
                     "y": str(lat),
@@ -219,8 +218,8 @@ async def coord2region(lat: float, lng: float) -> dict | None:
     Returns:
         {"region_1depth": "서울특별시", "region_2depth": "강남구", "region_3depth": "역삼동", "display_name": "강남구 역삼동"}
     """
-    if not KAKAO_API_KEY:
-        # 목업: 좌표로 대략적 지역 추정
+    def _mock_region(lat: float, lng: float) -> dict:
+        """좌표로 대략적 지역 추정 (목업)"""
         for name, coords in LOCATION_COORDS.items():
             if abs(lat - coords["lat"]) < 0.02 and abs(lng - coords["lng"]) < 0.02:
                 return {
@@ -236,17 +235,19 @@ async def coord2region(lat: float, lng: float) -> dict | None:
             "display_name": "강남구 역삼동",
         }
 
+    if not os.getenv("KAKAO_REST_API_KEY"):
+        return _mock_region(lat, lng)
+
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(
                 KAKAO_COORD2REGION_URL,
-                headers={"Authorization": f"KakaoAK {KAKAO_API_KEY}"},
+                headers={"Authorization": f"KakaoAK {os.getenv('KAKAO_REST_API_KEY')}"},
                 params={"x": str(lng), "y": str(lat)},
             )
             if response.status_code == 200:
                 data = response.json()
                 documents = data.get("documents", [])
-                # H(행정동) 타입 우선, 없으면 B(법정동) 사용
                 region = None
                 for doc in documents:
                     if doc.get("region_type") == "H":
@@ -265,7 +266,9 @@ async def coord2region(lat: float, lng: float) -> dict | None:
                         "region_3depth": r3,
                         "display_name": f"{r2} {r3}".strip(),
                     }
+            else:
+                print(f"Kakao coord2region API error: {response.status_code}")
         except Exception as e:
             print(f"Kakao coord2region API error: {e}")
 
-    return None
+    return _mock_region(lat, lng)
