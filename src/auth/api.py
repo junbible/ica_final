@@ -33,6 +33,9 @@ oauth_states: dict[str, str] = {}
 # 일회용 인증 코드 → user_id 매핑 (콜백 후 프론트엔드에서 쿠키 교환용)
 auth_codes: dict[str, int] = {}
 
+# 디버그: 마지막 콜백 에러 저장
+_last_callback_error: Optional[str] = None
+
 
 def get_or_create_user(db: Session, user_info: OAuthUserInfo) -> User:
     """사용자 조회 또는 생성"""
@@ -166,10 +169,13 @@ async def kakao_callback(
             status_code=302,
         )
     except Exception as e:
+        global _last_callback_error
+        import traceback
+        _last_callback_error = traceback.format_exc()
         logger.exception(f"Kakao callback unexpected error: {e}")
         from urllib.parse import quote
         return RedirectResponse(
-            url=f"{FRONTEND_URL}?auth_error=server_error&detail={quote(str(e))}",
+            url=f"{FRONTEND_URL}?auth_error=server_error&detail={quote(str(e)[:200])}",
             status_code=302,
         )
 
@@ -355,7 +361,7 @@ async def debug_cookies(request: Request):
 @router.get("/debug/last-error")
 async def debug_last_error():
     """마지막 콜백 에러 확인"""
-    return {"last_error": getattr(debug_last_error, "_last_error", None)}
+    return {"last_error": _last_callback_error}
 
 
 @router.get("/debug/set-test-cookie")
