@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -152,9 +152,14 @@ async def kakao_callback(
     logger.info(f"Creating/updating user: {user_info.nickname}")
     user = get_or_create_user(db, user_info)
 
-    # 리다이렉트 응답 생성
+    # HTML 응답으로 쿠키 설정 후 JavaScript로 리다이렉트
+    # (RedirectResponse의 Set-Cookie가 프록시에서 유실되는 문제 방지)
     logger.info(f"Login success, redirecting to {FRONTEND_URL}")
-    response = RedirectResponse(url=f"{FRONTEND_URL}?auth_success=true")
+    redirect_url = f"{FRONTEND_URL}?auth_success=true"
+    html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
+    <script>window.location.replace("{redirect_url}");</script>
+    </body></html>"""
+    response = HTMLResponse(content=html)
     create_auth_response(response, user, db)
 
     return response
