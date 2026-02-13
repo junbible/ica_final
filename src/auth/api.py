@@ -137,33 +137,41 @@ async def kakao_callback(
 
     del oauth_states[state]
 
-    # 액세스 토큰 획득
-    logger.info("Exchanging code for access token...")
-    access_token = await KakaoOAuth.get_access_token(code)
-    if not access_token:
-        logger.error("Failed to get Kakao access token")
-        return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=token_failed")
+    try:
+        # 액세스 토큰 획득
+        logger.info("Exchanging code for access token...")
+        access_token = await KakaoOAuth.get_access_token(code)
+        if not access_token:
+            logger.error("Failed to get Kakao access token")
+            return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=token_failed")
 
-    # 사용자 정보 조회
-    logger.info("Fetching user info from Kakao...")
-    user_info = await KakaoOAuth.get_user_info(access_token)
-    if not user_info:
-        logger.error("Failed to get Kakao user info")
-        return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=user_info_failed")
+        # 사용자 정보 조회
+        logger.info("Fetching user info from Kakao...")
+        user_info = await KakaoOAuth.get_user_info(access_token)
+        if not user_info:
+            logger.error("Failed to get Kakao user info")
+            return RedirectResponse(url=f"{FRONTEND_URL}?auth_error=user_info_failed")
 
-    # 사용자 생성/조회
-    logger.info(f"Creating/updating user: {user_info.nickname}")
-    user = get_or_create_user(db, user_info)
+        # 사용자 생성/조회
+        logger.info(f"Creating/updating user: {user_info.nickname}")
+        user = get_or_create_user(db, user_info)
 
-    # 일회용 인증 코드 생성 → 프론트엔드에서 fetch()로 쿠키 교환
-    auth_code = secrets.token_urlsafe(32)
-    auth_codes[auth_code] = user.id
-    logger.info(f"Login success, generated auth_code for user {user.id}")
+        # 일회용 인증 코드 생성 → 프론트엔드에서 fetch()로 쿠키 교환
+        auth_code = secrets.token_urlsafe(32)
+        auth_codes[auth_code] = user.id
+        logger.info(f"Login success, generated auth_code for user {user.id}")
 
-    return RedirectResponse(
-        url=f"{FRONTEND_URL}?auth_code={auth_code}",
-        status_code=302,
-    )
+        return RedirectResponse(
+            url=f"{FRONTEND_URL}?auth_code={auth_code}",
+            status_code=302,
+        )
+    except Exception as e:
+        logger.exception(f"Kakao callback unexpected error: {e}")
+        from urllib.parse import quote
+        return RedirectResponse(
+            url=f"{FRONTEND_URL}?auth_error=server_error&detail={quote(str(e))}",
+            status_code=302,
+        )
 
 
 
@@ -342,6 +350,12 @@ async def debug_cookies(request: Request):
             }
 
     return result
+
+
+@router.get("/debug/last-error")
+async def debug_last_error():
+    """마지막 콜백 에러 확인"""
+    return {"last_error": getattr(debug_last_error, "_last_error", None)}
 
 
 @router.get("/debug/set-test-cookie")
