@@ -16,8 +16,19 @@ load_dotenv()
 
 router = APIRouter(prefix="/chat", tags=["chatbot"])
 
-# OpenAI 클라이언트
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# OpenAI 클라이언트 (lazy 초기화 — API 키 없어도 서버 시작 가능)
+_client: AsyncOpenAI | None = None
+
+
+def get_openai_client() -> AsyncOpenAI | None:
+    """OpenAI 클라이언트를 lazy하게 생성"""
+    global _client
+    if _client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return None
+        _client = AsyncOpenAI(api_key=api_key)
+    return _client
 
 # 세션별 대화 히스토리 및 컨텍스트
 sessions: dict[str, dict] = {}
@@ -336,6 +347,9 @@ def detect_location(message: str) -> str | None:
 
 async def get_openai_response(messages: list[dict]) -> str:
     """OpenAI API 호출"""
+    client = get_openai_client()
+    if client is None:
+        return "OpenAI API 키가 설정되지 않았어요. 관리자에게 문의해주세요 🔑"
     try:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
