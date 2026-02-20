@@ -9,10 +9,7 @@ interface LocationGateProps {
 export function LocationGate({ onConfirm }: LocationGateProps) {
   const { status, position, requestLocation } = useGeolocation()
   const [showFallback, setShowFallback] = useState(false)
-
-  useEffect(() => {
-    requestLocation()
-  }, [])
+  const [hasRequested, setHasRequested] = useState(false)
 
   useEffect(() => {
     if (status === "granted" && position) {
@@ -23,6 +20,11 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
     }
   }, [status, position, onConfirm])
 
+  const handleRequestGPS = () => {
+    setHasRequested(true)
+    requestLocation()
+  }
+
   const handleFallback = (loc: string) => {
     const coords = LOCATION_COORDS[loc]
     if (coords) {
@@ -30,7 +32,8 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
     }
   }
 
-  if (status === "idle" || status === "requesting") {
+  // GPS 요청 중
+  if (hasRequested && (status === "idle" || status === "requesting")) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 px-4">
         <div className="text-6xl animate-pulse">📍</div>
@@ -39,6 +42,7 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
     )
   }
 
+  // GPS 거부 → 지역 선택 폴백
   if (showFallback || status === "denied") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 px-4">
@@ -51,12 +55,12 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
             위치 권한이 거부되었어요. 아래에서 선택해주세요.
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+        <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
           {LOCATIONS.map((loc) => (
             <button
               key={loc}
               onClick={() => handleFallback(loc)}
-              className="px-4 py-3 rounded-xl bg-white border-2 border-gray-100 text-gray-700 font-medium hover:border-primary hover:text-primary transition-colors shadow-sm"
+              className="px-3 py-3 rounded-xl bg-white border-2 border-gray-100 text-gray-700 font-medium hover:border-primary hover:text-primary transition-colors shadow-sm text-sm"
             >
               {loc}
             </button>
@@ -66,21 +70,29 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
     )
   }
 
+  // GPS 사전 안내 화면 (첫 진입 시)
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] gap-6 px-4">
-      <div className="text-6xl animate-bounce">📍</div>
-      <p className="text-gray-600 font-medium">위치 권한을 허용해주세요</p>
+      <div className="text-6xl">📍</div>
+      <div className="text-center">
+        <h2 className="text-xl font-bold text-gray-800 mb-2">
+          내 근처 맛집을 찾아볼까요?
+        </h2>
+        <p className="text-gray-500 text-sm leading-relaxed">
+          위치 정보를 허용하면<br />가까운 맛집을 바로 추천해드려요
+        </p>
+      </div>
       <button
-        onClick={requestLocation}
-        className="px-6 py-2.5 rounded-full bg-primary text-white font-medium text-sm"
+        onClick={handleRequestGPS}
+        className="px-6 py-3 rounded-full bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors shadow-md"
       >
-        위치 허용하기
+        현재 위치로 찾기
       </button>
       <button
         onClick={() => setShowFallback(true)}
         className="text-sm text-gray-400 underline"
       >
-        직접 선택할게요
+        직접 지역을 선택할게요
       </button>
     </div>
   )

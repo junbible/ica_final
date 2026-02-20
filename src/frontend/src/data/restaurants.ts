@@ -22,7 +22,7 @@ export const CATEGORIES = [
 ]
 
 // 지역 목록
-export const LOCATIONS = ["강남", "홍대", "신촌", "이태원", "성수", "여의도"]
+export const LOCATIONS = ["강남", "홍대", "신촌", "이태원", "성수", "여의도", "명동", "건대", "잠실"]
 
 // 지역별 좌표 (프론트엔드 폴백 / GPS 비교용)
 export const LOCATION_COORDS: Record<string, { lat: number; lng: number }> = {

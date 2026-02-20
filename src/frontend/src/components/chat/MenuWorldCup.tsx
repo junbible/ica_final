@@ -169,12 +169,12 @@ export function MenuWorldCup({ onComplete }: MenuWorldCupProps) {
           <h2 className="text-lg font-bold text-gray-800 mb-1">어디서 드실 건가요?</h2>
           <p className="text-xs text-gray-500">위치 권한이 거부되었어요. 아래에서 선택해주세요.</p>
         </div>
-        <div className="grid grid-cols-2 gap-3 w-full max-w-xs">
+        <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
           {LOCATIONS.map((loc) => (
             <button
               key={loc}
               onClick={() => handleFallbackLocation(loc)}
-              className="px-4 py-3 rounded-xl bg-white border-2 border-gray-100 text-gray-700 font-medium hover:border-primary hover:text-primary transition-colors shadow-sm"
+              className="px-3 py-3 rounded-xl bg-white border-2 border-gray-100 text-gray-700 font-medium hover:border-primary hover:text-primary transition-colors shadow-sm text-sm"
             >
               {loc}
             </button>
