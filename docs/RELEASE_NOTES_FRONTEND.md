@@ -30,6 +30,16 @@
 - **위치 localStorage 저장** — 선택한 위치를 자동 저장, 재방문 시 "이전 위치 사용" 원탭 제공
 - **카카오 services 라이브러리** — `libraries=services` 추가로 키워드 검색 활성화
 
+#### 반경 선택 칩 (P2)
+- **500m / 1km / 3km 칩** — LocationGate에서 위치 선택 시 반경도 함께 설정
+- **localStorage 저장** — 선택한 반경이 저장되어 스와이프·월드컵 모두에 적용
+- **useRecommendation 연동** — confirmLocation에 radius 파라미터 추가
+
+#### 시간대별 맞춤 추천 (P2)
+- **환영 메시지** — 아침/점심/오후/저녁/야식 시간대별 다른 인사말
+- **퀵리플라이** — 시간대에 맞는 5개 선택지 (아침: 해장·든든, 점심: 빠르게·특선, 저녁: 고기·회식 등)
+- **5개 시간대** — morning (6-10시), lunch (10-14시), afternoon (14-17시), dinner (17-21시), latenight (21시-)
+
 #### 개발 환경 개선
 - **Vite dev proxy** — `/api`, `/chat`, `/auth` 요청을 `localhost:8000`으로 프록시
 
@@ -48,7 +58,8 @@ src/frontend/
     ├── hooks/
     │   └── useWorldCup.ts                 # 브라켓 토너먼트 로직 (신규)
     ├── lib/
-    │   └── kakao-maps.ts                  # searchPlaces() 헬퍼 추가
+    │   ├── kakao-maps.ts                  # searchPlaces() 헬퍼 추가
+    │   └── time-context.ts                # 시간대별 인사말/퀵리플라이 (신규)
     ├── components/
     │   ├── chat/
     │   │   ├── ChatContainer.tsx          # 게임 버튼 + 오버레이 통합
@@ -64,11 +75,10 @@ src/frontend/
 
 ### 📌 다음 버전 예정
 
-- [ ] 반경 선택 칩 (500m / 1km / 3km)
-- [ ] 시간대별 맞춤 추천 (아침=해장, 점심=특선 등)
 - [ ] 구글 로그인 연동
 - [ ] 최근 본 맛집 기록
 - [ ] 푸시 알림
+- [ ] 지도 위 "이 지역 검색" 패턴
 
 ---
 
