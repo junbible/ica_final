@@ -56,7 +56,8 @@ src/frontend/
     │   ├── restaurants.ts                  # LOCATIONS 9개로 확대
     │   └── worldcup-menus.ts              # 월드컵 16개 메뉴 데이터 (신규)
     ├── hooks/
-    │   └── useWorldCup.ts                 # 브라켓 토너먼트 로직 (신규)
+    │   ├── useWorldCup.ts                 # 브라켓 토너먼트 로직 (신규)
+    │   └── useRecommendation.ts           # confirmLocation에 radius 파라미터 추가
     ├── lib/
     │   ├── kakao-maps.ts                  # searchPlaces() 헬퍼 추가
     │   └── time-context.ts                # 시간대별 인사말/퀵리플라이 (신규)
@@ -68,7 +69,7 @@ src/frontend/
     │   │   ├── WorldCupBattle.tsx         # VS 대결 UI (신규)
     │   │   └── MenuWorldCup.tsx           # 월드컵 전체 플로우 (신규)
     │   └── recommend/
-    │       └── LocationGate.tsx           # 사전 안내 + 검색 + 저장
+    │       └── LocationGate.tsx           # 사전 안내 + 검색 + 저장 + 반경 칩
 ```
 
 ---
