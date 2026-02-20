@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { RotateCcw, Sparkles, X } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import { QuickReplies } from "./QuickReplies"
 import { ChatInput } from "./ChatInput"
 import { MapCard, type Restaurant } from "./MapCard"
 import { MenuCard, type Menu } from "./MenuCard"
+import { ChatOverlay, type OverlayResult } from "./ChatOverlay"
 
 interface Message {
   id: string
@@ -45,6 +46,7 @@ export function ChatContainer({ onClose }: ChatContainerProps = {}) {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
   const [isLoading, setIsLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [activeOverlay, setActiveOverlay] = useState<"swipe" | "worldcup" | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -55,12 +57,15 @@ export function ChatContainer({ onClose }: ChatContainerProps = {}) {
     scrollToBottom()
   }, [messages, isLoading])
 
+  const now = () =>
+    new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
+
   const sendMessage = async (content: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       content,
       isUser: true,
-      timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+      timestamp: now(),
     }
 
     setMessages((prev) => [...prev, userMessage])
@@ -85,7 +90,7 @@ export function ChatContainer({ onClose }: ChatContainerProps = {}) {
         id: (Date.now() + 1).toString(),
         content: data.response,
         isUser: false,
-        timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+        timestamp: now(),
         menus: data.menus || undefined,
         restaurants: data.restaurants || undefined,
       }
@@ -97,7 +102,7 @@ export function ChatContainer({ onClose }: ChatContainerProps = {}) {
         id: (Date.now() + 1).toString(),
         content: "앗, 연결이 불안정해요 😵 잠시 후 다시 시도해주세요!",
         isUser: false,
-        timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
+        timestamp: now(),
       }
       setMessages((prev) => [...prev, errorMessage])
     } finally {
@@ -117,8 +122,34 @@ export function ChatContainer({ onClose }: ChatContainerProps = {}) {
     setSessionId(null)
   }
 
+  const handleOverlayComplete = useCallback((result: OverlayResult) => {
+    setActiveOverlay(null)
+
+    const userContent =
+      result.type === "swipe"
+        ? "스와이프로 메뉴추천 받기"
+        : `메뉴 월드컵 🏆 ${result.winnerName ?? ""} 우승!`
+
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      content: userContent,
+      isUser: true,
+      timestamp: now(),
+    }
+
+    const botMsg: Message = {
+      id: (Date.now() + 1).toString(),
+      content: result.summary,
+      isUser: false,
+      timestamp: now(),
+      restaurants: result.restaurants.length > 0 ? result.restaurants : undefined,
+    }
+
+    setMessages((prev) => [...prev, userMsg, botMsg])
+  }, [])
+
   return (
-    <Card className="w-full h-full sm:w-[420px] sm:h-[680px] sm:max-h-[90vh] mx-auto flex flex-col shadow-2xl shadow-primary/20 border-0 sm:rounded-xl rounded-none overflow-hidden">
+    <Card className="relative w-full h-full sm:w-[420px] sm:h-[680px] sm:max-h-[90vh] mx-auto flex flex-col shadow-2xl shadow-primary/20 border-0 sm:rounded-xl rounded-none overflow-hidden">
       {/* 헤더 - 그라데이션 배경 */}
       <CardHeader className="bg-gradient-to-r from-[#FBBF24] to-[#F59E0B] text-white py-4 px-5">
         <div className="flex items-center justify-between">
@@ -186,6 +217,24 @@ export function ChatContainer({ onClose }: ChatContainerProps = {}) {
         </ScrollArea>
       </CardContent>
 
+      {/* 게임 버튼 */}
+      <div className="flex gap-2 px-4 pt-2">
+        <button
+          onClick={() => setActiveOverlay("swipe")}
+          disabled={isLoading}
+          className="flex-1 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-amber-400 text-white text-sm font-bold shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
+        >
+          스와이프 추천 🍽️
+        </button>
+        <button
+          onClick={() => setActiveOverlay("worldcup")}
+          disabled={isLoading}
+          className="flex-1 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white text-sm font-bold shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
+        >
+          메뉴 월드컵 🏆
+        </button>
+      </div>
+
       {/* 빠른 선택 버튼 */}
       {messages.length === 1 && !isLoading && (
         <QuickReplies
@@ -197,6 +246,15 @@ export function ChatContainer({ onClose }: ChatContainerProps = {}) {
 
       {/* 입력 영역 */}
       <ChatInput onSend={sendMessage} disabled={isLoading} />
+
+      {/* 게임 오버레이 */}
+      {activeOverlay && (
+        <ChatOverlay
+          type={activeOverlay}
+          onComplete={handleOverlayComplete}
+          onClose={() => setActiveOverlay(null)}
+        />
+      )}
     </Card>
   )
 }
