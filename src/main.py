@@ -15,6 +15,7 @@ from chatbot.rate_limit import limiter, rate_limit_exceeded_handler, RateLimits
 from auth import auth_router
 from favorites import favorites_router
 from restaurant import restaurant_router
+from recommend import recommend_router
 from database.connection import init_db
 
 # 프론트엔드 빌드 디렉토리
@@ -99,6 +100,7 @@ app.include_router(chatbot_router)
 app.include_router(auth_router)
 app.include_router(favorites_router)
 app.include_router(restaurant_router)
+app.include_router(recommend_router)
 
 # 프론트엔드 정적 파일 서빙
 if FRONTEND_DIR.exists():

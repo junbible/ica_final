@@ -1,6 +1,6 @@
 import { useState, Component, type ReactNode, type ErrorInfo } from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-import { MainPage, RestaurantDetail, MyPage } from "./pages"
+import { MainPage, RestaurantDetail, MyPage, RecommendPage } from "./pages"
 import { ChatContainer } from "./components/chat"
 import { OnboardingDialog } from "./components/onboarding/OnboardingDialog"
 import { useOnboarding } from "./hooks/useOnboarding"
@@ -72,6 +72,7 @@ function AppContent() {
           path="/"
           element={<MainPage onOpenChat={() => setIsChatOpen(true)} />}
         />
+        <Route path="/recommend" element={<RecommendPage />} />
         <Route path="/restaurant/:id" element={<RestaurantDetail />} />
         <Route path="/mypage" element={<MyPage />} />
         <Route
