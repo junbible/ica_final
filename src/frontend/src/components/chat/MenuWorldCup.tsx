@@ -9,6 +9,13 @@ import type { Restaurant } from "./MapCard"
 
 type Phase = "setup" | "playing" | "winner" | "locating" | "searching" | "done"
 
+function getSavedRadius(): number {
+  try {
+    const v = localStorage.getItem("nyam_radius")
+    return v ? Number(v) : 1000
+  } catch { return 1000 }
+}
+
 interface MenuWorldCupProps {
   onComplete: (restaurants: Restaurant[], summary: string, winnerName: string) => void
 }
@@ -55,7 +62,7 @@ export function MenuWorldCup({ onComplete }: MenuWorldCupProps) {
           worldCup.winner.searchKeyword,
           pos.coords.latitude,
           pos.coords.longitude,
-          1500,
+          getSavedRadius(),
           undefined,
           3,
         )

@@ -32,8 +32,9 @@ export function useRecommendation() {
   const [error, setError] = useState<string | null>(null)
   const [radius, setRadius] = useState(1200)
 
-  const confirmLocation = useCallback((lat: number, lng: number) => {
+  const confirmLocation = useCallback((lat: number, lng: number, r?: number) => {
     setLocation({ lat, lng })
+    if (r !== undefined) setRadius(r)
     setStep("swiping")
   }, [])
 

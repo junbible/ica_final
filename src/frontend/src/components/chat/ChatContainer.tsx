@@ -10,6 +10,7 @@ import { ChatInput } from "./ChatInput"
 import { MapCard, type Restaurant } from "./MapCard"
 import { MenuCard, type Menu } from "./MenuCard"
 import { ChatOverlay, type OverlayResult } from "./ChatOverlay"
+import { getTimeContext } from "../../lib/time-context"
 
 interface Message {
   id: string
@@ -23,20 +24,16 @@ interface Message {
 // 프로덕션에서는 같은 도메인에서 서빙되므로 빈 문자열 사용
 const API_URL = import.meta.env.VITE_API_URL || ""
 
+const timeCtx = getTimeContext()
+
 const INITIAL_MESSAGE: Message = {
   id: "welcome",
-  content: "안녕하세요! 오늘 컨디션은 어떠세요? 맞춤 메뉴를 추천해드릴게요 😊",
+  content: timeCtx.greeting,
   isUser: false,
   timestamp: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }),
 }
 
-const QUICK_REPLIES = [
-  "피곤해요 😫",
-  "숙취가 있어요 🍺",
-  "스트레스 받아요 😤",
-  "감기 기운이 있어요 🤧",
-  "가볍게 먹고 싶어요 🥗"
-]
+const QUICK_REPLIES = timeCtx.quickReplies
 
 interface ChatContainerProps {
   onClose?: () => void

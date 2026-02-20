@@ -5,6 +5,13 @@ import { LOCATIONS, LOCATION_COORDS } from "../../data/restaurants"
 import { searchPlaces, type PlaceSearchResult } from "../../lib/kakao-maps"
 
 const STORAGE_KEY = "nyam_last_location"
+const RADIUS_KEY = "nyam_radius"
+
+const RADIUS_OPTIONS = [
+  { value: 500, label: "500m" },
+  { value: 1000, label: "1km" },
+  { value: 3000, label: "3km" },
+]
 
 interface SavedLocation {
   name: string
@@ -28,8 +35,19 @@ function loadSavedLocation(): SavedLocation | null {
   }
 }
 
+function saveRadius(r: number) {
+  try { localStorage.setItem(RADIUS_KEY, String(r)) } catch {}
+}
+
+function loadRadius(): number {
+  try {
+    const v = localStorage.getItem(RADIUS_KEY)
+    return v ? Number(v) : 1000
+  } catch { return 1000 }
+}
+
 interface LocationGateProps {
-  onConfirm: (lat: number, lng: number) => void
+  onConfirm: (lat: number, lng: number, radius?: number) => void
 }
 
 export function LocationGate({ onConfirm }: LocationGateProps) {
@@ -37,6 +55,7 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
   const [showFallback, setShowFallback] = useState(false)
   const [hasRequested, setHasRequested] = useState(false)
   const [savedLocation] = useState<SavedLocation | null>(loadSavedLocation)
+  const [selectedRadius, setSelectedRadius] = useState(loadRadius)
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("")
@@ -47,12 +66,17 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
   useEffect(() => {
     if (status === "granted" && position) {
       saveLocation("현재 위치", position.coords.latitude, position.coords.longitude)
-      onConfirm(position.coords.latitude, position.coords.longitude)
+      onConfirm(position.coords.latitude, position.coords.longitude, selectedRadius)
     }
     if (status === "denied") {
       setShowFallback(true)
     }
-  }, [status, position, onConfirm])
+  }, [status, position, onConfirm, selectedRadius])
+
+  const handleRadiusChange = (r: number) => {
+    setSelectedRadius(r)
+    saveRadius(r)
+  }
 
   const handleRequestGPS = () => {
     setHasRequested(true)
@@ -61,7 +85,8 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
 
   const handleSelectLocation = (name: string, lat: number, lng: number) => {
     saveLocation(name, lat, lng)
-    onConfirm(lat, lng)
+    saveRadius(selectedRadius)
+    onConfirm(lat, lng, selectedRadius)
   }
 
   const handleFallback = (loc: string) => {
@@ -93,6 +118,26 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
     }, 300)
   }
 
+  // 반경 선택 칩 (공통 UI)
+  const radiusChips = (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-gray-400">반경</span>
+      {RADIUS_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => handleRadiusChange(opt.value)}
+          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+            selectedRadius === opt.value
+              ? "bg-primary text-white"
+              : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+
   // GPS 요청 중
   if (hasRequested && (status === "idle" || status === "requesting")) {
     return (
@@ -115,6 +160,9 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
             장소를 검색하거나 지역을 선택해주세요
           </p>
         </div>
+
+        {/* 반경 선택 */}
+        {radiusChips}
 
         {/* 검색 입력 */}
         <div className="w-full max-w-xs relative">
@@ -198,6 +246,9 @@ export function LocationGate({ onConfirm }: LocationGateProps) {
           위치 정보를 허용하면<br />가까운 맛집을 바로 추천해드려요
         </p>
       </div>
+
+      {/* 반경 선택 */}
+      {radiusChips}
 
       {/* 이전 위치가 있으면 바로 사용 옵션 */}
       {savedLocation && (
