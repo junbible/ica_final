@@ -23,6 +23,34 @@ function callLoadWithTimeout(timeoutMs = 10000): Promise<void> {
   })
 }
 
+export interface PlaceSearchResult {
+  name: string
+  address: string
+  lat: number
+  lng: number
+}
+
+export async function searchPlaces(query: string): Promise<PlaceSearchResult[]> {
+  await loadKakaoMaps()
+  return new Promise((resolve) => {
+    const ps = new window.kakao.maps.services.Places()
+    ps.keywordSearch(query, (data: any[], status: string) => {
+      if (status !== window.kakao.maps.services.Status.OK || !data.length) {
+        resolve([])
+        return
+      }
+      resolve(
+        data.slice(0, 5).map((p: any) => ({
+          name: p.place_name,
+          address: p.address_name,
+          lat: parseFloat(p.y),
+          lng: parseFloat(p.x),
+        }))
+      )
+    })
+  })
+}
+
 export function loadKakaoMaps(): Promise<void> {
   if (sdkPromise) return sdkPromise
 
